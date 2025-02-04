@@ -1,0 +1,262 @@
+#Properties to skip in definition rendering
+skip:
+  - related_part
+  - attributed_part
+  - attributed_regional_part
+  - attributed_constitutional_part
+
+#Roles whose CNL can be deterministically determined via:
+#Singular/plural phrase: " is {prop_lname} [..]"
+#                Prompt: "What is [..] {prop_lname}?"
+# Where {prop_lname} is listed below and the short name of the role
+standard_role_restriction_is_phrasing:
+  - adjacent_to
+  - surrounded_by
+  - part_of
+  - right_medial_to
+  - anterosuperior_to
+  - anteroinferior_to
+  - left_lateral_to
+  - right_lateral_to
+  - left_medial_to
+  - anterior_to
+  - posterosuperior_to
+  - anterolateral_to
+  - anteroinferior_to
+  - contained_in
+  - medial_to
+  - lateral_to
+  - proximal_to
+  - superior_to
+  - posterior_to
+  - bounded_by
+  - continuous_distally_with
+  - continuous_with
+  - distal_to
+  - connected_to
+  - continuous_proximally_with
+  - superomedial_to
+  - posteroinferior_to
+  - posterolateral_to
+  - superolateral_to
+  - anteromedial_to
+  - posteromedial_to
+  - inferolateral_to
+  - external_to
+  - inferior_to
+  - inferomedial_to
+
+#Custom CNL phrasing for the role restrictions of the roles specified below,
+#each is given with a custom CNL for singular objects, plural objects, and the
+#The 'definition instruction'
+#For the first two, they take the object or list of objects as a parameter and for the
+#definition instruction, it takes the name of the class
+role_restriction_phrasing:
+  part:
+    - 'has {} as a part'
+    - 'has {} as a part'
+    - 'What are the parts of {}?'
+  constitutional_part:
+    - 'has {} as a compositionally distinct anatomical element'
+    - 'has {} as compositionally distinct anatomical elements'
+    - 'What are the compositionally distinct anatomical elements of {}?'
+  derives:
+    - 'has {} as a derivation'
+    - 'has {} as derivations'
+    - 'What are the derivations of {}?'
+  lymphatic_drainage_of:
+    - 'is the lymphatic drainage of {}'
+    - 'is the lymphatic drainage of {}'
+    - 'What is {} the lymphatic drainage of?'
+  constitutional_part_of:
+    - 'is a compositionally distinct anatomical element of {}'
+    - 'is a compositionally distinct anatomical element of {}'
+    - 'What is {} a compositionally distinct anatomical element of?'
+  regional_part_of:
+    - 'is a regional element of {}'
+    - 'is a regional element of {}'
+    - 'What is {} a regional element of?'
+  regional_part:
+    - 'has {} as a regional element'
+    - 'has {} as regional elements'
+    - 'What are the regional elements of {}?'
+  branch:
+    - 'has {} as a regional subtree'
+    - 'has {} as regional subtrees'
+    - 'What are the regional subtrees of {}?'
+  branch_of:
+    - 'is a regional subtree of {}'
+    - 'is a regional subtree of {}'
+    - 'What is {} a regional subtree of?'
+  arterial_supply_of:
+    - 'is an arterial supply of {}'
+    - 'is an arterial supply of {}'
+    - 'What is {} an arterial supply of?'
+  muscle_attachment:
+    - 'has {} as an attached muscle'
+    - 'has {} as attached muscles'
+    - 'What are the attached muscles of {}?'
+  primary_segmental_supply:
+    - 'has {} as its primary segmental supply'
+    - 'has {} as its primary segmental supply'
+    - 'What is the primary segmental supply of {}?'
+  has_direct_cell_shape:
+    - 'has a {} cell shape'
+    - 'has a {} cell shape'
+    - 'What cell shape does {} have?'
+  segmental_supply:
+    - 'has {} as its segmental supply'
+    - 'has {} as its segmental supply'
+    - 'What is the segmental supply of {}?'
+  germ_origin:
+    - 'derives from {} germ layer'
+    - 'derives from {} germ layer'
+    - 'What is the germ layer that {} derives from?'
+  segmental_composition:
+    - 'has {} as a segmental composition'
+    - 'has {} as segmental compositions'
+    - 'What are the segmental compositions of {}?'
+  nerve_supply:
+    - 'has {} as a nerve supply'
+    - 'has {} as a nerve supply'
+    - 'What is the nerve supply of {}?'
+  has_insertion:
+    - 'has insertion {}'
+    - 'has insertion {}'
+    - 'Where is {} inserted?'
+  tributary_of:
+    - 'is a tributary of {}'
+    - 'is a tributary of {}'
+    - 'What is {} a tributary of?'
+  developmental_stage_of:
+    - 'is the developmental stage of {}'
+    - 'is the developmental stage of {}'
+    - 'What is {} the developmental stage of?'
+  tributary:
+    - 'has {} as a tributary'
+    - 'has {} as tributaries'
+    - 'What are the tributaries of {}?'
+  sends_output_to:
+    - 'sends output to {}'
+    - 'sends output to {}'
+    - 'Where does {} send output to?'
+  nerve_supply_of:
+    - 'is the nerve supply of {}'
+    - 'is the nerve supply of {}'
+    - 'What is {} the nerve supply of?'
+  origin_of:
+    - 'is the origin of {}'
+    - 'is the origin of {}'
+    - 'What is {} the origin of?'
+  receives_attachment_from:
+    - 'receives attachment from {}'
+    - 'receives attachment from {}'
+    - 'What does {} receive attachment from?'
+  lymphatic_drainage:
+    - 'has {} as its lymphatic drainage'
+    - 'has {} as its lymphatic drainage'
+    - 'What is the lymphatic drainage of {}?'
+  arterial_supply:
+    - 'has {} as its arterial supply'
+    - 'has {} as its arterial supply'
+    - 'What are the arterial supplies of {}?'
+  has_origin:
+    - 'has {} as its origin'
+    - 'has {} as its origin'
+    - 'What is the origin of {}?'
+  secondary_segmental_supply:
+    - 'has {} as its secondary segmental supply'
+    - 'has {} as its secondary segmental supply'
+    - 'What is the secondary segmental supply of {}?'
+  primary_segmental_supply_of:
+    - 'is the primary segmental supply of {}'
+    - 'is the primary segmental supply of {}'
+    - 'What is {} the primary segmental supply of?'
+  secondary_segmental_supply_of:
+    - 'is the secondary segmental supply of {}'
+    - 'is the secondary segmental supply of {}'
+    - 'What is {} the secondary segmental supply of?'
+  segmental_composition_of:
+    - 'is the segmental composition of {}'
+    - 'is the segmental composition of {}'
+    - 'What is {} the segmental composition of?'
+  segmental_supply_of:
+    - 'is the segmental supply of {}'
+    - 'is the segmental supply of {}'
+    - 'What is {} the segmental supply of?'
+  has_developmental_stage:
+    - 'has {} as a developmental stage'
+    - 'has {} as developmental stages'
+    - 'What are the developmental stages of {}?'
+  venous_drainage_of:
+    - 'is the venous drainage of {}'
+    - 'is the venous drainage of {}'
+    - 'What is {} the venous drainage of?'
+  connection_type:
+    - 'has {} as its connection type'
+    - 'has {} as its connection types'
+    - 'What are the connection types of {}?'
+  member:
+    - 'comprises {}'
+    - 'comprises {}'
+    - 'What does {} comprise?'
+  has_location:
+    - 'is located in {}'
+    - 'is located in {}'
+    - 'Where is {} located?'
+  insertion_of:
+    - 'is an insertion of {}'
+    - 'is an insertion of {}'
+    - 'What is {} an insertion of?'
+  has_projection:
+    - 'has {} as a projection'
+    - 'has {} as projections'
+    - 'What are the projections of {}?'
+  venous_drainage:
+    - 'has {} as a venous drainage'
+    - 'has {} as a venous drainage'
+    - 'What is the venous drainage of {}?'
+  direct_left_of:
+  - 'is to the direct left of {}'
+  - 'is to the direct left of {}'
+  - 'What is the orientation of {}?'
+  direct_right_of:
+    - 'is to the direct right of {}'
+    - 'is to the direct right of {}'
+    - 'What is the orientation of {}?'
+  input_from:
+    - 'takes input from {}'
+    - 'takes input from {}'
+    - 'What does {} take input from?'
+  efferent_to:
+    - 'drains into {}'
+    - 'drains into {}'
+    - 'What does {} drain into?'
+  afferent_to:
+    - 'is continuous upstream with {}'
+    - 'is continuous upstream with {}'
+    - 'With what is {} continuous upstream?'
+  fma0329350:
+    - 'is continuous inferiorly with {}'
+    - 'is continuous inferiorly with {}'
+    - 'With what is {} continuous inferiorly?'
+  fma0329349:
+    - 'is continuous superiorly with {}'
+    - 'is continuous superiorly with {}'
+    - 'With what is {} continuous superiorly?'
+  branch__continuity_:
+    - 'has branch continuity with {}'
+    - 'has branch continuity with {}'
+    - 'With what does {} have branch continuity?'
+  receives_projection:
+    - 'receives projections from {}'
+    - 'receives projections from {}'
+    - 'From where does {} receive projections?'
+  fusion_of:
+    - 'is a fusion of {}'
+    - 'is a fusion of {}'
+    - 'With is {} a fusion of?'
+  anatomical_entity_observed:
+    - 'involves the {} anatomy'
+    - 'involves the {} anatomy'
+    - 'What is the anatomy involved in {}?'
