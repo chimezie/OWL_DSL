@@ -186,7 +186,7 @@ def render_attributed_development(concept: Union[Construct, EntityClass]) -> str
     return f"develops in {process.lower()} into {related_concept}".strip()
 
 
-def render_orientation_restriction(concept: Union[Construct, EntityClass], reverse_mapping: Dict[str, int]) -> str:
+def render_orientation_restriction(concept: Union[Construct, EntityClass]) -> str:
     related_object = None
     laterality = None
     coordinate = None
@@ -263,8 +263,7 @@ def render_class_name(klass: ThingClass, capitalize_first_letter=False, no_indef
     return name
 
 
-def render_concept(concept: Union[Construct, EntityClass], reverse_mapping: Dict[str, int],
-                   anonymous: bool = False) -> str:
+def render_concept(concept: Union[Construct, EntityClass], anonymous: bool = False) -> str:
     if concept is None:
         raise NotImplemented
     if isinstance(concept, ThingClass):
@@ -279,9 +278,9 @@ def render_concept(concept: Union[Construct, EntityClass], reverse_mapping: Dict
         s = []
         for x in concept.Classes:
             if isinstance(x, LogicalClassConstruct):
-                s.append("(" + render_concept(x, reverse_mapping) + ")")
+                s.append("(" + render_concept(x) + ")")
             else:
-                s.append(render_concept(x, reverse_mapping))
+                s.append(render_concept(x))
         if isinstance(concept, Or):
             return pretty_print_list(s, and_char=", or ")
         if isinstance(concept, And):
@@ -312,7 +311,7 @@ def render_concept(concept: Union[Construct, EntityClass], reverse_mapping: Dict
             raise NotImplemented
         if concept.type == base.VALUE:
             return "%s %s .{%s}" % (dl_render._DL_SYNTAX.EXISTS,
-                                    render_concept(concept.property, reverse_mapping),
+                                    render_concept(concept.property),
                                     concept.value.name
                                     if isinstance(concept.value, owl.Thing) else concept.value)
         if concept.type == base.HAS_SELF:
@@ -361,7 +360,7 @@ def extract_definitional_phrases(definitional_phrases, class_iterable, name, han
                     name_or_pronoun = handle_first_definitional_phrase(definitional_phrases, name)
                     for c in _group:
                         try:
-                            phrase = custom_render_fn(c.value, {})
+                            phrase = custom_render_fn(c.value)
                         except NotImplementedError as e:
                             # print(f"#### Skipping {prop_iri} ({e}) ###")
                             continue
@@ -373,7 +372,7 @@ def extract_definitional_phrases(definitional_phrases, class_iterable, name, han
                     singular_phrase, plural_phrase, prompt = cnl_phrase
                     values = []
                     for c in _group:
-                        concept_name = render_concept(c.value, {})
+                        concept_name = render_concept(c.value)
                         values.append(prefix_with_indefinite_article(concept_name)
                                       if URIRef(prop_iri) not in ROLE_RESTRICTION_WO_ARTICLES else concept_name)
                     name_or_pronoun = handle_first_definitional_phrase(definitional_phrases, name)

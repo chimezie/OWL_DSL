@@ -1,2 +1,4 @@
 rdflib
 owlready2
+click
+pyyaml
