@@ -1,0 +1,777 @@
+# [[[
+#  Summary of Key Features
+#  Placeholders ({}): These are used by the Python code to inject the names of anatomical structures (e.g., "The
+#  Heart has the Aorta as a part"). Semantic Mapping: It bridges the gap between machine-readable RDF/OWL (the URIs)
+#  and human-friendly documentation.
+
+# A "Translation Dictionary" between URI codes and English grammar for ontology tools.
+# ]]]
+
+# CNL configuration file fpr Uberon, with comments of its use with
+# the Foundational Model of Anatomy (FMA)
+
+# owl:AnnotationProperty properties for term definitions
+tooling:
+  expert_definition_properties: ['http://purl.obolibrary.org/obo/IAO_0000115', #Information Artifact Ontology (IAO) define
+                                  # A phrase describing how a term should be used and/or a citation to a work which uses
+                                  # it. May also include other kinds of examples that facilitate immediate understanding,
+                                  # such as widely know prototypes or instances of a class, or cases where a relation is
+                                  # said to hold.
+                                  ]
+
+#Properties to skip in definition rendering
+#skip:
+#  - related_part
+#  - attributed_part
+#  - attributed_regional_part
+#  - attributed_constitutional_part
+
+#Roles whose CNL can be deterministically determined via:
+#Singular/plural phrase: " is {prop_lname} [..]"
+#                Prompt: "What is [..] {prop_lname}?"
+# Where {prop_lname} is listed below and the short name of the role
+
+standard_role_restriction_is_phrasing:
+  - http://purl.obolibrary.org/obo/RO_0002177
+  - http://purl.obolibrary.org/obo/RO_0002353
+  - http://purl.obolibrary.org/obo/RO_0002352
+  - http://purl.obolibrary.org/obo/RO_0002215
+  - http://purl.obolibrary.org/obo/BFO_0000050
+  - http://purl.obolibrary.org/obo/RO_0002170
+  - http://purl.obolibrary.org/obo/RO_0002220
+  - http://purl.obolibrary.org/obo/RO_0002371
+  - http://purl.obolibrary.org/obo/RO_0002219
+  - http://purl.obolibrary.org/obo/RO_0003001
+  - http://purl.obolibrary.org/obo/BFO_0000050
+  - http://purl.obolibrary.org/obo/BFO_0000062
+  - http://purl.obolibrary.org/obo/RO_0002473
+  - http://purl.obolibrary.org/obo/BSPO_0001102
+  - http://purl.obolibrary.org/obo/BSPO_0015005
+  - http://purl.obolibrary.org/obo/BSPO_0000102
+  - http://purl.obolibrary.org/obo/RO_0002596
+  - http://purl.obolibrary.org/obo/RO_0002005
+  - http://purl.obolibrary.org/obo/RO_0002087
+  - http://purl.obolibrary.org/obo/RO_0002334
+  - http://purl.obolibrary.org/obo/RO_0002150
+  - http://purl.obolibrary.org/obo/RO_0002256
+  - http://purl.obolibrary.org/obo/RO_0002328
+  - http://purl.obolibrary.org/obo/RO_0002571
+  - http://purl.obolibrary.org/obo/RO_0002159
+  - http://purl.obolibrary.org/obo/uberon/core#proximally_connected_to
+  - http://purl.obolibrary.org/obo/uberon/core#distally_connected_to
+
+reflexive_roles:
+  - 'http://purl.obolibrary.org/obo/RO_0002481':
+    - 'that interacts with itself via kinase activity'
+
+#Custom CNL phrasing for the role restrictions of the roles specified below,
+#each is given with a custom CNL for singular objects, plural objects, and the
+#phrase to use as a question to prompt the phrasing
+
+#For the first two, they take the object or list of objects as a parameter and for the
+#definition, it takes the name of the class
+#Alternatively, only two custom CNL phrases can be provided, in which case the first is used for both singular and plural objects
+
+role_restriction_phrasing:
+  # existence starts during or after
+  # x existence starts during or after y if and only if the time point at which x starts is after or equivalent to the
+  # time point at which y starts. Formally: x existence starts during or after y iff α (x) >= α (y).
+  'http://purl.obolibrary.org/obo/RO_0002496':
+    - 'began during or after {}'
+    - 'began during or after {}'
+    - 'What does {} begin during or after?'
+
+  # existence ends with
+  # x existence ends with y if and only if the time point at which x ends is equivalent to the time point at which y
+  # ends. Formally: x existence ends with y iff ω(x) = ω(y).
+  'http://purl.obolibrary.org/obo/RO_0002493':
+    - 'ends with {}'
+    - 'ends with {}'
+    - 'What does {} end with?'
+
+  # branching part of
+  # x is a branching part of y if and only if x is part of y and x is connected directly or indirectly to the main stem of y
+  'http://purl.obolibrary.org/obo/RO_0002380':
+    - 'is a branching part of {}'
+    - 'is a branching part of {}'
+    - 'What is a branching part of {}?'
+
+  # luminal space of
+  # s is luminal space of x iff s is lumen_of x and s is an immaterial entity"
+  'http://purl.obolibrary.org/obo/RO_0002572':
+    - 'is the luminal space of {}'
+    - 'is the luminal space of {}'
+    - 'What is the luminal space of {}?'
+
+  # has developmental contribution from
+  # x has developmental contribution from y iff x has some part z such that z develops from y"
+  'http://purl.obolibrary.org/obo/RO_0002254':
+    - 'has a developmental contribution from {}'
+    - 'has developmental contributions from {}'
+    - 'What does {} have developmental contributions from?'
+
+  # immediate transformation of
+  # x immediate transformation of y iff x immediately succeeds y temporally at a time boundary t, and all of the matter
+  # present in x at t is present in y at t, and all the matter in y at t is present in x at t
+  'http://purl.obolibrary.org/obo/RO_0002495':
+    - 'is an immediate transformation of {}'
+    - 'is an immediate transformation of {}'
+    - 'What is {} an immediate transformed of?'
+
+  # has component
+  # w &apos;has component&apos; p if w &apos;has part&apos; p and w is such that it can be directly disassembled into
+  # into n parts p, p2, p3, ..., pn, where these parts are of similar type.
+  'http://purl.obolibrary.org/obo/RO_0002180':
+    - 'has {} as its component'
+    - 'has {} as its components'
+    - 'What are the components of {}?'
+
+  # existence ends during or before
+  # x existence ends during or before y if and only if the time point at which x ends is before or equivalent to the
+  # time point at which y ends.
+  'http://purl.obolibrary.org/obo/RO_0002497':
+    - 'ends during or before {}'
+    - 'ends during or before {}'
+    - 'What does {} end during or during?'
+
+  # conduit for
+  # x is a conduit for y iff y overlaps through the lumen_of of x, and y has parts on either side of the lumen of x.
+  'http://purl.obolibrary.org/obo/RO_0002570':
+    - 'is a conduit for {}'
+    - 'is a conduit for {}'
+    - 'What is a conduit for {}?'
+
+#
+#
+# '':
+#   - ''
+#   - ''
+#   - '?'
+#
+# http://purl.obolibrary.org/obo/uberon/core#proximally_connected_to 'proximally connected to' "x proximally_connected_to y iff the proximal part of x is connected to y. i.e. x connected_to y and x distal_to y.
+  # location of
+  # a relation between two independent continuants, the location and the target, in which the target is entirely within
+  # the location
+  'http://purl.obolibrary.org/obo/RO_0001015':
+    - 'is located in {}'
+    - 'is located in {}'
+    - 'What is the location of {}?'
+
+  # has quality
+  # a relation between an independent continuant (the bearer) and a quality, in which the quality specifically depends
+  # on the bearer for its existence"
+  'http://purl.obolibrary.org/obo/RO_0000086':
+    - 'has {} quality'
+    - 'has {} quality'
+    - 'What are the qualities of {}?'
+
+  # has skeleton
+  # A relation between a segment or subdivision of an organism and the maximal subdivision of material entities that
+  # provides structural support for that segment or subdivision."
+  'http://purl.obolibrary.org/obo/RO_0002551':
+    - 'has {} as its skeleton'
+    - 'has {} as its skeletons'
+    - 'What are the skeletons of {}?'
+
+  # only in taxon
+  # x only in taxon y if and only if x is in taxon y, and there is no other organism z such that y!=z a and x is in
+  # taxon z.
+  'http://purl.obolibrary.org/obo/RO_0002160':
+    - 'is only {}'
+    - 'is only {}'
+    - 'What taxons are {} only in?'
+
+
+  'http://purl.obolibrary.org/obo/RO_0015012':
+    - 'is the reciprocal of {}'
+    - 'is the reciprocal of {}'
+    - 'What is the reciprocal of {}?'
+
+  # has intermediate
+  # p has intermediate c if and only if p has parts p1, p2 and p1 has output c, and p2 has input c
+  'http://purl.obolibrary.org/obo/RO_0002505':
+    - 'has {} as an intermediate'
+    - 'has {} as intermediates'
+    - 'What are the intermediates of {}?'
+
+  # results in transport along
+  # Holds between p and l when p is a transportation or localization process and the outcome of this process is to move
+  # c from one location to another, and the route taken by c follows a path that is aligned_with l "
+  'http://purl.obolibrary.org/obo/RO_0002341':
+    - 'results in transport along {}'
+    - 'results in transport along {}'
+    - 'What does {} result in transport along?'
+
+  # results in developmental progression of
+  # p results in the developmental progression of s iff p is a developmental process and s is an anatomical entity and
+  # p causes s to undergo a change in state at some point along its natural developmental cycle (this cycle starts with
+  # its formation, through the mature structure, and ends with its loss)."
+  'http://purl.obolibrary.org/obo/RO_0002295':
+    - 'results in the developmental progression of {}'
+    - 'results in the developmental progression of {}'
+    - 'What does {} result in developmental progression of?'
+
+  # results in disassembly of
+  'http://purl.obolibrary.org/obo/RO_0002590':
+    - 'results in the disassembly of {}'
+    - 'results in the disassembly of {}'
+    - 'What does {} result in disassembly of?'
+
+  # results in transport to from or in
+  'http://purl.obolibrary.org/obo/RO_0002344':
+    - 'results in transport to, from, or in {}'
+    - 'results in transport to, from, or in {}'
+    - 'What does {} result in transport to, from, or in?'
+
+  # results in transport across
+  # Holds between p and m when p is a transportation or localization process and the outcome of this process is to move
+  # c from one location to another, and the route taken by c follows a path that crosses m.
+  'http://purl.obolibrary.org/obo/RO_0002342':
+    - 'results in transport across {}'
+    - 'results in transport across {}'
+    - 'What does {} result in transport across?'
+
+  # has target start location
+  # This relationship holds between p and l when p is a transport or localization process in which the outcome is to
+  # move some cargo c from some initial location l to some destination.
+  'http://purl.obolibrary.org/obo/RO_0002338':
+    - 'has {} as a target start location'
+    - 'has {} as target start locations'
+    - 'What are the target start locations of {}?'
+
+  # acts on population of
+  # p acts on population of c iff c' is a collection, has members of type c, and p has participant c
+  'http://purl.obolibrary.org/obo/RO_0012003':
+    - 'acts on a population of {}'
+    - 'acts on a population of {}'
+    - 'What does {} act on?'
+
+  # has potential to develop into
+  # x has the potential to develop into y iff x develops into y or if x is capable of developing into y
+  'http://purl.obolibrary.org/obo/RO_0002387':
+    - 'has the potential to develop into {}'
+    - 'has the potential to develop into {}'
+    - 'What does {} have the potential to develop into?'
+
+  # has primary input or output
+  # p 'has primary input ot output' c iff either (a) p 'has primary input' c or (b) p 'has primary output' c.
+  'http://purl.obolibrary.org/obo/RO_0004007':
+    - 'has {} as its primary input or output'
+    - 'has {} as its primary input or output'
+    - 'What are the primary inputs or outputs of {}?'
+
+  # regulates levels of
+  # p regulates levels of c if p regulates some amount (PATO:0000070) of c
+  'http://purl.obolibrary.org/obo/RO_0002332':
+    - 'regulates levels of {}'
+    - 'regulates levels of {}'
+    - 'What does {} regulate levels of?'
+
+  # 'results in assembly of'
+  'http://purl.obolibrary.org/obo/RO_0002588':
+    - 'results in the assembly of {}'
+    - 'results in the assembly of {}'
+    - 'What does {} result in assembly of?'
+
+  # results in acquisition of features of
+  # The relationship that links a specified entity with the process that results in an unspecified entity acquiring the
+  # features and characteristics of the specified entity"
+  'http://purl.obolibrary.org/obo/RO_0002315':
+    - 'results in the acquisition of {}'
+    - 'results in the acquisition of {}'
+    - 'What does {} result in acquisition of?'
+
+  # has participant
+  # a relation between a process and a continuant, in which the continuant is somehow involved in the process
+  'http://purl.obolibrary.org/obo/RO_0000057':
+    - 'has {} as a participant'
+    - 'has {} as participants'
+    - 'What are the participants of {}?'
+
+  # results in maturation of
+  # The relationship that links an entity with a process that results in the progression of the entity over time that is
+  # independent of changes in it's shape and results in an end point state of that entity."
+  'http://purl.obolibrary.org/obo/RO_0002299':
+    - 'results in the maturation of {}'
+    - 'results in the maturation of {}'
+    - 'What does {} result in maturation of?'
+
+  # 'results in growth of'
+  'http://purl.obolibrary.org/obo/RO_0002343':
+    - 'results in the growth of {}'
+    - 'results in the growth of {}'
+    - 'What does {} result in growth of?'
+
+  # results in morphogenesis of
+  # The relationship that links an entity with the process that results in the formation and shaping of that entity over
+  # time from an immature to a mature state.
+  'http://purl.obolibrary.org/obo/RO_0002298':
+    - 'results in the morphogenesis of {}'
+    - 'results in the morphogenesis of {}'
+    - 'What does {} result in morphogenesis of?'
+
+  # results in fusion of
+  'http://purl.obolibrary.org/obo/RO_0012008':
+    - 'results in the fusion of {}'
+    - 'results in the fusion of {}'
+    - 'What does {} result in fusion of?'
+
+  # results in organization of
+  # p results in organization of c iff p results in the assembly, arrangement of constituent parts, or disassembly of c
+  'http://purl.obolibrary.org/obo/RO_0002592':
+    - 'results in the organization of {}'
+    - 'results in the organization of {}'
+    - 'What does {} result in the organization of?'
+
+  # has synaptic IO in region
+  # A relationship between a neuron and a region, where the neuron has a functionally relevant number of input and/or
+  # output synapses in that region.
+  'http://purl.obolibrary.org/obo/RO_0013001':
+    - 'has synaptic input and output at {}'
+    - 'has synaptic input and output at {}'
+    - 'Where does {} have synaptic input and output?'
+
+  # existence starts and ends during
+  # x exists during y if and only if: 1) the time point at which x begins to exist is after or equal to the time point
+  # at which y begins and 2) the time point at which x ceases to exist is before or equal to the point at which y ends.
+  # Formally: x existence starts and ends during y iff α(x) >= α(y) & α(x) <= ω(y) & ω(x) <= ω(y) & ω(x) >= α(y)
+  'http://purl.obolibrary.org/obo/RO_0002491':
+    - 'exists during {}'
+    - 'exists during {}'
+    - 'What does {} exist during?'
+
+  # has potential to directly develop into
+  # x has potential to directly develop into y iff x directly develops into y or x is capable of directly developing
+  #into y
+  'http://purl.obolibrary.org/obo/RO_0002388':
+    - 'has the potential to directly develop into {}'
+    - 'has the potential to directly develop into {}'
+    - 'What does {} have potential to directly develop into?'
+
+  # has characterizing marker set
+  # A relation that applies between a cell type and a set of markers that can be used to uniquely identify that cell
+  # type.
+  'http://purl.obolibrary.org/obo/RO_0015004':
+    - 'has {} as a characterizing marker'
+    - 'has {} as characterizing markers'
+    - 'What are the characterizing markers of {}?'
+
+  # has low plasma membrane amount
+  # A relation between a cell and molecule or complex such that every instance of the cell has a low number of
+  # instances of that molecule expressed on the cell surface.
+  'http://purl.obolibrary.org/obo/RO_0015016':
+    - 'has a low amount of {} on its plasma membrane'
+    - 'has low amounts of {} on its plasma membrane'
+    - 'What does {} have low amount of on its plasma membrane?'
+
+  # bounding layer of
+  'http://purl.obolibrary.org/obo/RO_0002007':
+    - 'is the bounding layer of {}'
+    - 'is the bounding layer of {}'
+    - 'What is the bounding layer of {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0002002':
+    - 'has {} as its bounding layer'
+    - 'has {} as its bounding layer'
+    - 'What is the bounding layer of {}?'
+
+  # has potential to developmentally contribute to
+  # x has potential to developmentrally contribute to y iff x developmentally contributes to y or x is capable of
+  # developmentally contributing to y
+  'http://purl.obolibrary.org/obo/RO_0002385':
+    - 'has the potential to contribute to the development of {}'
+    - 'has the potential to contribute to the development of {}'
+    - 'What does {} have the potential to developmentally contribute to?'
+
+  'http://purl.obolibrary.org/obo/RO_0002565':
+    - 'it results in the movement of {}'
+    - 'it results in the movement of {}'
+    - 'What does {} result in the movement of?'
+
+  # x transformation of y if x is the immediate transformation of y, or is linked to y through a chain of transformation
+  # relationships
+  'http://purl.obolibrary.org/obo/RO_0002494':
+    - 'is a transformation of {}'
+    - 'is a transformation of {}'
+    - 'What is {} transformed of?'
+
+  # simultaneous with
+  # x simultaneous with y iff ω(x) = ω(y) and ω(α ) = ω(α), where α is a function that maps a process to a start point,
+  # and ω is a function that maps a process to an end point and &apos;=&apos; indicates the same instance in time.
+  'http://purl.obolibrary.org/obo/RO_0002082':
+    - 'occurs simultaneously with {}'
+    - 'occurs simultaneously with {}'
+    - 'What does {} occurs simultaneously with?'
+
+  # 'has target end location'
+  # This relationship holds between p and l when p is a transport or localization process in which the outcome is to
+  # move some cargo c from a an initial location to some destination l.
+  'http://purl.obolibrary.org/obo/RO_0002339':
+    - 'has {} as a target end location'
+    - 'has {} as a target end location'
+    - 'What are the target end locations of {}?'
+
+  # has primary input
+  'http://purl.obolibrary.org/obo/RO_0004009':
+    - 'has {} as its primary input'
+    - 'has {} as its primary input'
+    - 'What are the primary inputs of {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0002372':
+    - 'has {} as a muscle origin'
+    - 'has {} as muscle origins'
+    - 'What are the muscle origins of {}?'
+
+  # has muscle insertion
+  # m has_muscle_insertion s iff m is attaches_to s, and it is the case that when m contracts, s moves.
+  #Insertions are usually connections of muscle via tendon to bone.
+  'http://purl.obolibrary.org/obo/RO_0002373':
+    - 'has {} as a muscle insertion'
+    - 'has {} as muscle insertions'
+    - 'What are the muscle insertions of {}?'
+
+  # has muscle antagonist
+  # m1 has_muscle_antagonist m2 iff m1 has_muscle_insertion s, m2 has_muscle_insection s, m1 acts in opposition to m2,
+  # and m2 is responsible for returning the structure to its initial position.
+  'http://purl.obolibrary.org/obo/RO_0002568':
+    - 'has {} as a muscle antagonist'
+    - 'has {} as muscle antagonists'
+    - 'What are the muscle antagonists of {}?'
+
+  # 'has muscle origin'
+  # m has_muscle_origin s iff m is attached_to s, and it is the case that when m contracts, s
+  # does not move. The site of the origin tends to be more proximal and have greater mass than what the other end
+  # attaches to."
+  'http://purl.obolibrary.org/obo/RO_0002372':
+    - 'has {} as a muscle origin'
+    - 'has {} as muscle origins'
+    - 'What are the muscle origins of {}?'
+
+  # derived from ancestral fusion of
+  # x has_fused_element y iff: there exists some z : x has_part z, z homologous_to y, and y is a distinct element,
+  # the boundary between x and z is largely fiat
+  'http://purl.obolibrary.org/obo/RO_0002374':
+    - 'is derived from the ancestral fusion of {}'
+    - 'is derived from the ancestral fusion of {}'
+    - 'What is derived from the ancestral fusion of {}?'
+
+  # in taxon
+  # x is in taxon y if an only if y is an organism, and the relationship between x and y is one of: part of (reflexive),
+  # developmentally preceded by, derives from, secreted by, expressed.
+  # Connects a biological entity to its taxon of origin.
+  'http://purl.obolibrary.org/obo/RO_0002162':
+  - 'is in {} taxon'
+  - 'is in {} taxons'
+  - 'What taxon is {} in?'
+
+  # vessel_drains_blood_from
+  # x vessel drains blood from y if and only if x is a vessel that drains blood directly or indirectly from an
+  # anatomical structure y.
+  'http://purl.obolibrary.org/obo/RO_0020102':
+    - 'drains blood from {}'
+    - 'drains blood from {}'
+    - 'What does {} drain blood from?'
+
+  'http://purl.obolibrary.org/obo/RO_0002428':
+    - 'is involved in the regulation of {}'
+    - 'is involved in the regulation of {}'
+    - 'What is {} involved in the regulation of?'
+
+  # in superficial part of
+  # X superficial part of Y &lt;=&gt; if Y is subdivided into two superficial and deep portions, X is part of the
+  # superficial portion.
+  "http://purl.obolibrary.org/obo/BSPO_0001100":
+    - 'is in the superficial part of {}'
+    - 'is in the superficial part of {}'
+    - 'What is {} in the superficial part of?'
+
+  "http://purl.obolibrary.org/obo/BSPO_0000124":
+    - 'is in the proximal side of {}'
+    - 'is in the proximal side of {}'
+    - 'What is {} in the proximal side of?'
+
+  "http://purl.obolibrary.org/obo/RO_0002360":
+    - 'has {} as a dendrite location'
+    - 'has {} as dendrite locations'
+    - 'What are the dendrite locations of {}?'
+
+  # has presynaptic terminal in
+  # Relation between a neuron and some structure (e.g.- a brain region) in which it receives (chemical) synaptic input.
+  "http://purl.obolibrary.org/obo/RO_0002113":
+    - 'has {} as a presynaptic terminal'
+    - 'has {} as a presynaptic terminal'
+    - 'What is the  presynaptic terminal of {}?'
+
+  # has_not_completed
+  'http://purl.obolibrary.org/obo/CL_4030044':
+    - 'has not completed {}'
+    - 'has not completed {}'
+    - 'What has {} not completed?'
+
+  # has high plasma membrane amount
+  # "A relation between a cell and molecule or complex such that every instance of the cell has a high number of
+  # instances of that molecule expressed on the cell surface."
+  'http://purl.obolibrary.org/obo/RO_0015015':
+    - 'has a high plasma membrane amount of {}'
+    - 'has a high plasma membrane amount of {}'
+    - 'What does {} have a high plasma membrane amount of?'
+
+  'http://purl.obolibrary.org/obo/CL_4030044':
+    - 'has not completed {}'
+    - 'has not completed {}'
+    - 'What has {} not completed?'
+
+  'http://purl.obolibrary.org/obo/CL_4030046':
+    - 'lacks a {} as a plasma membrane part'
+    - 'lacks {} as plasma membrane parts'
+    - 'What are the plasma membrane parts that {} lacks?'
+
+  # "Holds between a cell c and a protein complex or protein p if and only if that cell has as part a
+  # plasma_membrane[GO:0005886], and that plasma membrane has p as part.
+  # 'has plasma membrane part'
+  'http://purl.obolibrary.org/obo/RO_0002104':
+    - 'has {} as a plasma membrane part'
+    - 'has {} as plasma membrane parts'
+    - 'What are the plasma membrane parts of {}?'
+
+
+  # contains process.
+  # [copied from inverse property &apos;occurs in&apos;] b occurs_in c =def b is a process and c is a material entity or
+  # immaterial entity&amp; there exists a spatiotemporal region r and b occupies_spatiotemporal_region r.&amp; forall(t)
+  # if b exists_at t then c exists_at t &amp; there exist spatial regions s and s’ where &amp; b spatially_projects_onto
+  # s at t&amp; c is occupies_spatial_region s’ at t&amp; s is a proper_continuant_part_of s’ at t
+  'http://purl.obolibrary.org/obo/BFO_0000067':
+    - 'contains {} as a process'
+    - 'contains {} as a process'
+    - 'What are the processes that contain {}?'
+
+  # Inverse of characteristic_of
+  # A bearer can have many dependents, and its dependents can exist for different periods of time, but none of its
+  # dependents can exist when the bearer does not exist.
+  'http://purl.obolibrary.org/obo/RO_0000053':
+    - 'has {} as a characteristic'
+    - 'has {} as characteristics'
+    - 'What are the characteristics of {}?'
+
+  # x &apos;has starts location&apos; y if and only if there exists some process z such that x &apos;starts with&apos;
+  # z and z &apos;occurs in&apos; y
+  'http://purl.obolibrary.org/obo/RO_0002231':
+    - 'starts at {}'
+    - 'starts at {}'
+    - 'Where does {} start?'
+
+  # has end location' y if and only if there exists some process z such that x 'ends with' z and z 'occurs in' y
+  'http://purl.obolibrary.org/obo/RO_0002232':
+    - 'ends at {}'
+    - 'ends at {}'
+    - 'Where does {} end?'
+
+  # p has primary output c if (a) p has output c and (b) the goal of process is to modify, produce, or transform c.
+  'http://purl.obolibrary.org/obo/RO_0004008':
+    - 'has {} as its primary output'
+    - 'has {} as its primary outputs'
+    - 'What are the primary outputs of {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0002224':
+    - 'begins with {}'
+    - 'begins with {}'
+    - 'What does {} start with?'
+
+  'http://purl.obolibrary.org/obo/RO_0002608':
+    - 'is caused by {}'
+    - 'is caused by {}'
+    - 'What is caused by {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0002100':
+    - 'has a soma part of {}'
+    - 'has {} cross sections'
+    - 'What are the cross section of {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0015011':
+    - 'has {} cross section'
+    - 'has {} cross sections'
+    - 'What are the cross section of {}?'
+  'http://purl.obolibrary.org/obo/RO_0002489':
+    - 'begins with {}'
+    - 'begins with {}'
+    - 'When does {} begin?'
+
+  'http://purl.obolibrary.org/obo/RO_0002492':
+    - 'ends during {}'
+    - 'ends during {}'
+    - 'When does {} end?'
+
+  'http://purl.obolibrary.org/obo/RO_0002488':
+    - 'begins during {}'
+    - 'begins during {}'
+    - 'When does {} begin?'
+
+  'http://purl.obolibrary.org/obo/RO_0020104':
+    - 'connected to itself'
+    - 'connected to itself'
+    - 'What is {} connected to?'
+
+  'http://purl.obolibrary.org/obo/RO_0002433':
+    - 'contributes to the morphology of {}'
+    - 'contributes to the morphology of {}'
+    - 'What does {} contribute to the morphology of?'
+
+  'http://purl.obolibrary.org/obo/RO_0002352':
+    - 'is the input of {}'
+    - 'is the input of {}'
+    - 'What is {} the input of?'
+
+  'http://purl.obolibrary.org/obo/RO_0002353':
+    - 'is the output of {}'
+    - 'is the output of {}'
+    - 'What is {} the output of?'
+
+  'http://purl.obolibrary.org/obo/RO_0002576':
+    - 'is the skeleton of {}'
+    - 'is the skeleton of {}'
+    - 'What is {} the skeleton of?'
+
+  'http://purl.obolibrary.org/obo/RO_0002202':
+    - 'develops from {}'
+    - 'develops from {}'
+    - 'What does {} develop from?'
+
+  'http://purl.obolibrary.org/obo/RO_0002252':
+    - 'is the connecting branch of {}'
+    - 'is the connecting branch of {}'
+    - 'What is {} the connecting branch of?'
+
+  'http://purl.obolibrary.org/obo/RO_0020101':
+    - 'is a vessel that supplies blood to {}'
+    - 'is a vessel that supplies blood to {}'
+    - 'What does {} supply blood to?'
+
+  'http://purl.obolibrary.org/obo/RO_0002216':
+    - 'is capable of some part of {}'
+    - 'is capable of some part of {}'
+    - 'What is {} capable of some part of?'
+
+  'http://purl.obolibrary.org/obo/RO_0002297':
+    - 'results in the anatomical formation of {}'
+    - 'results in the anatomical formation of {}'
+    - 'What anatomical formations do {} result in?'
+
+  'http://purl.obolibrary.org/obo/RO_0002296':
+    - 'results in the development of {}'
+    - 'results in the development of {}'
+    - 'What does {} result in the development of?'
+
+
+  'http://purl.obolibrary.org/obo/RO_0000087':
+    - 'bears the role of {}'
+    - 'bears the roles of {}'
+    - 'What roles does {} bear?'
+
+  'http://purl.obolibrary.org/obo/BFO_0000051':
+    - 'has {} as a part'
+    - 'has {} as its parts'
+    - 'What are the parts of {}?'
+
+   # regulates characteristic: relationship that holds between a process
+   # and a characteristic in which process (P) regulates characteristic
+   # (C) iff: P results in the existence of C OR affects the intensity or magnitude of C.
+  'http://purl.obolibrary.org/obo/RO_0019000':
+    - 'regulates {}'
+    - 'regulates {}'
+    - 'What characteristics does {} regulate?'
+
+  #'synapsed to' " Relation between a neuron and an anatomical structure (including cells) that it chemically synapses to.
+  'http://purl.obolibrary.org/obo/RO_0002120':
+    - 'chemically synapses to {}'
+    - 'chemically synapses to {}'
+    - 'What does {} chemically synapse to?'
+
+  #Relation between an anatomical structure (including cells) and a neuron that chemically synapses to it.
+  'http://purl.obolibrary.org/obo/RO_0002103':
+    - 'is chemically synapsed to by {}'
+    - 'is chemically synapsed to by {}'
+    - 'What is chemically synapses to {}?'
+
+  #has component'
+  #"w 'has component' p if w 'has part' p and w is such that it can be directly disassembled into into n parts p, p2,
+  #p3, ..., pn, where these parts are of similar type."
+  'http://purl.obolibrary.org/obo/RO_0002180':
+    - 'has {} as a component'
+    - 'has {} as components'
+    - 'What are the components of {}?'
+
+# tributary of http://purl.obolibrary.org/obo/RO_0002376
+# x tributary_of y if and only if x a channel for the flow of a substance into y, where y is larger than x. If x and y
+#  are hydrographic features, then y is the main stem of a river, or a lake or bay, but not the sea or ocean. If x and
+#  y are anatomical, then y is a vein.
+  'http://purl.obolibrary.org/obo/RO_0002376':
+    - 'is a tributary of {}'
+    - 'is a tributary of {}'
+    - 'What is {} a tributary of?'
+
+  #  member:
+  'http://purl.obolibrary.org/obo/RO_0002351':
+    - 'has {} as a member'
+    - 'has {} as a member'
+    - 'What are the members of {}?'
+
+  'http://purl.obolibrary.org/obo/RO_0001025':
+    - 'is located in {}'
+    - 'is located in {}'
+    - 'Where is {} located?'
+#  insertion_of:
+#    - 'is an insertion of {}'
+#    - 'is an insertion of {}'
+#    - 'What is {} an insertion of?'
+#  has_projection:
+#    - 'has {} as a projection'
+#    - 'has {} as projections'
+#    - 'What are the projections of {}?'
+#  venous_drainage:
+#    - 'has {} as a venous drainage'
+#    - 'has {} as a venous drainage'
+#    - 'What is the venous drainage of {}?'
+#  direct_left_of:
+#  - 'is to the direct left of {}'
+#  - 'is to the direct left of {}'
+#  - 'What is the orientation of {}?'
+#  direct_right_of:
+#    - 'is to the direct right of {}'
+#    - 'is to the direct right of {}'
+#    - 'What is the orientation of {}?'
+#  input_from:
+#    - 'takes input from {}'
+#    - 'takes input from {}'
+#    - 'What does {} take input from?'
+#  efferent_to:
+#    - 'drains into {}'
+#    - 'drains into {}'
+#    - 'What does {} drain into?'
+#  afferent_to:
+#    - 'is continuous upstream with {}'
+#    - 'is continuous upstream with {}'
+#    - 'With what is {} continuous upstream?'
+#  fma0329350:
+#    - 'is continuous inferiorly with {}'
+#    - 'is continuous inferiorly with {}'
+#    - 'With what is {} continuous inferiorly?'
+#  fma0329349:
+#    - 'is continuous superiorly with {}'
+#    - 'is continuous superiorly with {}'
+#    - 'With what is {} continuous superiorly?'
+#  branch__continuity_:
+#    - 'has branch continuity with {}'
+#    - 'has branch continuity with {}'
+#    - 'With what does {} have branch continuity?'
+#  receives_projection:
+#    - 'receives projections from {}'
+#    - 'receives projections from {}'
+#    - 'From where does {} receive projections?'
+#  fusion_of:
+#    - 'is a fusion of {}'
+#    - 'is a fusion of {}'
+#    - 'With is {} a fusion of?'
+#  anatomical_entity_observed:
+#    - 'involves the {} anatomy'
+#    - 'involves the {} anatomy'
+#    - 'What is the anatomy involved in {}?'
