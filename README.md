@@ -1,6 +1,6 @@
 # OWL / DSL
 A Python Library for managing a Domain Specific Language (DSL) for an Ontology using OWL, Controlled Natural Languages 
-(CNLs) [1], and naturally rendering definitions of its terms for use with Natural Language (NL) Processing tools such
+(CNLs) [1], and naturally rendered definitions of its terms for use with Natural Language (NL) Processing tools such
 as Large Language Models (LLMs), vectorization for use with In-context learning (ICL), and other applications of 
 standardized ontologies artifacts like these (GO, OBO, SNOMED CT, and other standarized logic-based biomedical ontologies).
 
