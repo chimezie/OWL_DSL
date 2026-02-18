@@ -15,7 +15,7 @@ standardized ontologies artifacts like these (GO, OBO, SNOMED CT, and other stan
 - [Curate OWL DSLs](#curate-owl-dsls)
 
 ## Introduction 
-This library started as the script used to generate [Grammatical Ontology Anatomist dataset](cogbuji/MrGrammaticalOntology_anatomist),
+This library started as the script used to generate [cogbuji/MrGrammaticalOntology_anatomist (Grammatical Ontology Anatomist dataset)](https://huggingface.co/datasets/cogbuji/MrGrammaticalOntology_anatomist),
 extracted from the Web Ontology Language (OWL) representation of the Foundational Model of Anatomy [2] using Owlready2 to 
 facilitate the extraction of the logical axioms in the FMA into a Controlled Natural Language (CNL) for use in 
 serializing ontology as corpus for use in training Medical Large Language Models to be conversant in canonical, human anatomy.
