@@ -48,9 +48,14 @@ $ source scratch/bin/activate
                                 --class-reference "vestibular aqueduct"
 [..snip..]
 Loaded ontology
-Definition: At the hinder part of the medial wall of the vestibule is the orifice of the vestibular aqueduct, which extends to the posterior surface of the petrous portion of the temporal bone. It transmits a small vein, and contains a tubular prolongation of the membranous labyrinth, the ductus endolymphaticus, which ends in a cul-de-sac between the layers of the dura mater within the cranial cavity. [WP,unvetted]. # 
+Definition: At the hinder part of the medial wall of the vestibule is the orifice of the vestibular aqueduct, which 
+extends to the posterior surface of the petrous portion of the temporal bone. It transmits a small vein, and contains a 
+tubular prolongation of the membranous labyrinth, the ductus endolymphaticus, which ends in a cul-de-sac between the 
+layers of the dura mater within the cranial cavity. [WP,unvetted]. # 
 # http://purl.obolibrary.org/obo/UBERON_0002279 # 
-The vestibular aqueduct is defined in Uber-anatomy ontology as a foramen of skull that is a conduit for a vein of vestibular aqueduct. It is a foramen of skull. It is part of an osseus labyrinth vestibule. It is a conduit for a vein of vestibular aqueduct
+The vestibular aqueduct is defined in Uber-anatomy ontology as a foramen of skull that is a conduit for a 
+vein of vestibular aqueduct. It is a foramen of skull. It is part of an osseus labyrinth vestibule. It is a conduit for 
+a vein of vestibular aqueduct
 ```
 
 ## Options
