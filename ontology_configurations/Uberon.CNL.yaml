@@ -147,7 +147,14 @@ role_restriction_phrasing:
    - 'is in the lateral side of {}'
    - 'is in the lateral side of {}'
    - 'What is {} in the lateral side of?'
-#
+
+# extends_fibers_into
+# X extends_fibers into Y iff there exists some neuron (N) and N has_soma_location X and N 'has synaptic IO in region' some Y'
+  'http://purl.obolibrary.org/obo/uberon/core#extends_fibers_into':
+    - 'extends fibers into {}'
+    - 'extends fibers into {}'
+    - 'What does {} extend fibers into?'
+
 # '':
 #   - ''
 #   - ''

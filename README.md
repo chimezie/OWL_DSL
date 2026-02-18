@@ -248,6 +248,8 @@ Definition: Mesopodial segment of the pes, including the tarsal skeleton and ass
 The tarsal region is defined in Uber-anatomy ontology as a mesopodium region that is part of a pes. It is a mesopodium region. It is a lower limb segment. It is part of a pes. It has a tarsal skeleton as its skeleton. It is distally connected to a metatarsus region. It is proximally connected to a hindlimb zeugopod
 ```
 
+> It is distally connected to a metatarsus region. It is proximally connected to a hindlimb zeugopod
+
 # Citations #
 1. Fuchs, N. E., Kaljurand, K., & Kuhn, T. (2008). *Attempto controlled english for knowledge representation*. In Reasoning Web: 4th International Summer School 2008, Venice, Italy, September 7-11, 2008, Tutorial Lectures (pp. 104-124). Berlin, Heidelberg: Springer Berlin Heidelberg.
 2. Rosse, Cornelius, and José LV Mejino Jr. *A reference ontology for biomedical informatics: the Foundational Model of Anatomy.* Journal of biomedical informatics 36.6 (2003): 478-500.
