@@ -475,7 +475,10 @@ def main(action,
             print("- ", prop.iri, f"'{prop_label}'" if prop_label else "(no label)",
                   f'"{definition}"' if definition else "(no definition)")
             if show_property_definition_usage:
-                query = IRI_AND_LABEL_FOR_EXAMPLE_SPARQL.format(filtered_prop=filter_only_prop_expr, limit=limit)
+                query = IRI_AND_LABEL_FOR_EXAMPLE_SPARQL.format(
+                    filtered_prop=match_object_sparql_expression("prop",
+                                                                 [prop.iri],just_filter=True),
+                    limit=limit)
                 for reference_class, class_label in default_world.sparql_query(query):
                     klass_base_uri, suffix = base_uri(reference_class.iri)
                     klass_label = [l for l in onto.get_namespace(klass_base_uri)[suffix].label

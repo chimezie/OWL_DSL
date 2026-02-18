@@ -141,7 +141,12 @@ role_restriction_phrasing:
     - 'is a conduit for {}'
     - 'What is a conduit for {}?'
 
-#
+ # in lateral side of
+ # X in lateral side of Y <=> if X is in left side of Y or X is in right side of Y. X is often, but not always a paired structure
+  'http://purl.obolibrary.org/obo/BSPO_0000126':
+   - 'is in the lateral side of {}'
+   - 'is in the lateral side of {}'
+   - 'What is {} in the lateral side of?'
 #
 # '':
 #   - ''
