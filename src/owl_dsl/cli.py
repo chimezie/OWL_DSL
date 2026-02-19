@@ -504,7 +504,9 @@ def main(action,
             return
         print(f"Loading Uberon ontology from {owl_url_or_path}, a IRI or local path.")
         get_ontology(owl_url_or_path).load()
+        default_world.base_iri = ontology_uri
         default_world.save()
+        print(default_world.ontologies)
         print(f"Saved {owl_url_or_path}")
 
 def is_first_class(ancestor) -> bool:

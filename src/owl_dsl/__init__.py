@@ -163,6 +163,6 @@ def prefix_with_indefinite_article(term: str | None, unquoted:bool = True) -> st
                     return f"{_indefinite_article(term)} " + _term
         else:
             warnings.warn("nlp not initialized")
-            return _indefinite_article(term)
+            return _indefinite_article(term) + f" {term}"
         return f"{_indefinite_article(term)} " + _term
 
