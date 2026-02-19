@@ -405,7 +405,7 @@ def main(action,
          limit,
          ontology_uri,
          ontology_namespace_baseuri,
-         owl_file):
+         owl_url_or_path):
     default_world.set_backend(filename=sqlite_file)
     if action == 'render_class':
         onto = default_world.ontologies[ontology_uri]
@@ -498,20 +498,18 @@ def main(action,
                     print(f"\n{reference_class.iri} '{klass_label}':")
                     print(f"{klass_definition if klass_definition else ''}")
             print('------'*5)
-    elif action == 'load_owl' and owl_file:
-        print(f"Loading Uberon ontology from {owl_file}")
-        get_ontology(owl_file).load()
+    elif action == 'load_owl' and owl_url_or_path:
+        print(f"Loading Uberon ontology from {owl_url_or_path}, a IRI or local path.")
+        get_ontology(owl_url_or_path).load()
         default_world.save()
-        print(f"Saved {owl_file}")
+        print(f"Saved {owl_url_or_path}")
 
 def is_first_class(ancestor) -> bool:
     return not isinstance(ancestor, Restriction) and isinstance(ancestor, ThingClass)
 
-
 def get_class_label(klass: ThingClass) -> str | None:
     labels: IndividualValueList = klass.label
     return next((item for item in labels if isinstance(item, str)), None)
-
 
 def setup_configuration(handler: OutputHandler, configuration_file: str) -> list[Any] | Any:
     with open(configuration_file, 'r') as file:
