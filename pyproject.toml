@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "OWL_DSL"
 version = "0.1.0"
-description = "Library for extracting Domain Specific Langauges from OWL (using Owlready2)"
+description = "Library for extracting Domain Specific Languages from OWL Ontologies (using owlready2)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -16,13 +16,13 @@ dependencies = [
     "spacy"
 ]
 authors = [
-  { name = "Chimezie Ogbuji", email = "chimezie@gmail.com" }
+  { name = "Chimezie Ogbuji" }
 ]
 
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
