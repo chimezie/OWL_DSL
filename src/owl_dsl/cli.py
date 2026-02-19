@@ -391,7 +391,7 @@ def match_object_sparql_expression(variable_name: str, resources: List[str],
               help="The URI of the ontology")
 @click.option('--ontology-namespace-baseuri', type=str, required=True,
               help="The base URI of the ontology namespace")
-@click.argument('owl_file', required=False)
+@click.argument('owl_url_or_path', required=False)
 def main(action,
          by_id,
          class_reference,
@@ -425,8 +425,8 @@ def main(action,
         for klass, definition in default_world.sparql_query(query):
             if definition:
                 print(f"Definition: {definition} # ")
-        print(f"# {klass.iri} # ")
-        print(handler.handle_class(klass))
+            print(f"# {klass.iri} # ")
+            print(handler.handle_class(klass))
 
 
     elif action == 'render_all_classes':
@@ -498,11 +498,29 @@ def main(action,
                     print(f"\n{reference_class.iri} '{klass_label}':")
                     print(f"{klass_definition if klass_definition else ''}")
             print('------'*5)
-    elif action == 'load_owl' and owl_url_or_path:
+    elif action == 'load_owl':
+        if not owl_url_or_path:
+            print("No ontology URL or path provided. Exiting.")
+            return
         print(f"Loading Uberon ontology from {owl_url_or_path}, a IRI or local path.")
-        get_ontology(owl_url_or_path).load()
-        default_world.save()
-        print(f"Saved {owl_url_or_path}")
+        from urllib.parse import urlparse
+        import ssl
+        import urllib.request
+        location = urlparse(owl_url_or_path)
+        if location.scheme in ["http", "https"]:
+            try:
+                context = ssl.create_default_context()
+                with urllib.request.urlopen(owl_url_or_path, context=context) as response:
+                    get_ontology(response).load()
+                    default_world.save()
+                    print(f"Saved {owl_url_or_path}")
+            except Exception as e:
+                print(f"Error accessing URL {owl_url_or_path}: {e}")
+                return
+        else:
+            get_ontology(owl_url_or_path).load()
+            default_world.save()
+            print(f"Saved {owl_url_or_path}")
 
 def is_first_class(ancestor) -> bool:
     return not isinstance(ancestor, Restriction) and isinstance(ancestor, ThingClass)
@@ -522,8 +540,9 @@ def setup_configuration(handler: OutputHandler, configuration_file: str) -> list
         definition_properties = config['tooling']['expert_definition_properties'] if config['tooling'] else []
         for prop in config['standard_role_restriction_is_phrasing']:
             prop_base_uri, suffix = base_uri(prop)
-            prop_label = [label for label in handler.ontology.get_namespace(prop_base_uri)[suffix].label
-                          if isinstance(label, str)][0]
+            props = [label for label in handler.ontology.get_namespace(prop_base_uri)[suffix].label if
+                    isinstance(label, str)]
+            prop_label = props[0] if props else '(no label)'
             handler.relevant_role_restriction_cnl_phrasing[URIRef(prop)] = (
                                                                        f'is {prop_label} ' + '{}',
                                                                    ) * 2 + ('What is {}' + f' {prop_label}?',)
