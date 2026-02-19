@@ -129,17 +129,18 @@ Then the property `IAO_0000115` will be used to render the definition of classes
 Any properties specified in a list of URIs in a section with key that is the same as the heading for this section are
 roles whose CNL templates can be deterministically determined via (where `prop_label` is the _*rdfs:label*_ of the property):
 
-> is [prop_label]
+> is [prop_label] {}
 
 And the definition prompt is assumed to be:
 
 > What is {} [prop_label]?'
 
-Which will not render property without using the `role_restriction_phrasing` directive.
+Which will not always render properly unless the `role_restriction_phrasing` directive is used to specify a custom
+definition prompt.
 
 ### role_restriction_phrasing
 
-In order to render a fully custom defintion prompt (and singular/plural rendering of a role restriction), you
+In order to render a fully custom definition prompt (and singular/plural rendering of a role restriction), you
 can use this directive in this way:
 
 ```yaml
