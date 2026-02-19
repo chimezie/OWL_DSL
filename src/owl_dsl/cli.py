@@ -12,7 +12,7 @@ from rdflib import Namespace, URIRef
 from owlready2 import (get_namespace, ThingClass, LogicalClassConstruct, Or, And, owl, Construct, EntityClass,
                        PropertyClass, Not, Inverse, Restriction, base, OneOf, ConstrainedDatatype, PropertyChain,
                        rdfs_datatype, DataPropertyClass, default_world,
-                       get_ontology, ClassConstruct, HAS_SELF)
+                       get_ontology, ClassConstruct, HAS_SELF, IndividualValueList)
 
 from owl_dsl import base_uri, pretty_print_list, prefix_with_indefinite_article
 
@@ -474,6 +474,12 @@ def main(action,
             prop_label = prop_label[0] if prop_label else None
             print("- ", prop.iri, f"'{prop_label}'" if prop_label else "(no label)",
                   f'"{definition}"' if definition else "(no definition)")
+            domain = [get_class_label(d) for d in prop.domain if is_first_class(d)]
+            range = [get_class_label(r) for r in prop.range if is_first_class(r)]
+            if domain:
+                print(f"\t- Domain: {', '.join(domain)}")
+            if range:
+                print(f"\t- Range: {', '.join(range)}")
             if show_property_definition_usage:
                 query = IRI_AND_LABEL_FOR_EXAMPLE_SPARQL.format(
                     filtered_prop=match_object_sparql_expression("prop",
@@ -489,15 +495,22 @@ def main(action,
                     except Exception as e:
                         print(f"Error: {e}")
                         klass_definition = None
-                    print(f"\t- {reference_class.iri} '{klass_label}'")
-                    print(f"\t- {klass_definition if klass_definition else ''}")
+                    print(f"\n{reference_class.iri} '{klass_label}':")
+                    print(f"{klass_definition if klass_definition else ''}")
+            print('------'*5)
     elif action == 'load_owl' and owl_file:
         print(f"Loading Uberon ontology from {owl_file}")
         get_ontology(owl_file).load()
         default_world.save()
         print(f"Saved {owl_file}")
-    else:
-        raise NotImplementedError("Action not implemented")
+
+def is_first_class(ancestor) -> bool:
+    return not isinstance(ancestor, Restriction) and isinstance(ancestor, ThingClass)
+
+
+def get_class_label(klass: ThingClass) -> str | None:
+    labels: IndividualValueList = klass.label
+    return next((item for item in labels if isinstance(item, str)), None)
 
 
 def setup_configuration(handler: OutputHandler, configuration_file: str) -> list[Any] | Any:
