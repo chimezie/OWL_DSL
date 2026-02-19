@@ -503,24 +503,9 @@ def main(action,
             print("No ontology URL or path provided. Exiting.")
             return
         print(f"Loading Uberon ontology from {owl_url_or_path}, a IRI or local path.")
-        from urllib.parse import urlparse
-        import ssl
-        import urllib.request
-        location = urlparse(owl_url_or_path)
-        if location.scheme in ["http", "https"]:
-            try:
-                context = ssl.create_default_context()
-                with urllib.request.urlopen(owl_url_or_path, context=context) as response:
-                    get_ontology(response).load()
-                    default_world.save()
-                    print(f"Saved {owl_url_or_path}")
-            except Exception as e:
-                print(f"Error accessing URL {owl_url_or_path}: {e}")
-                return
-        else:
-            get_ontology(owl_url_or_path).load()
-            default_world.save()
-            print(f"Saved {owl_url_or_path}")
+        get_ontology(owl_url_or_path).load()
+        default_world.save()
+        print(f"Saved {owl_url_or_path}")
 
 def is_first_class(ancestor) -> bool:
     return not isinstance(ancestor, Restriction) and isinstance(ancestor, ThingClass)
