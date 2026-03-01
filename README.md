@@ -42,7 +42,8 @@ flowchart LR
     A["configuration file"]
     B["ontology"]
     C["NL phrasing of ontology semantics"]
-    A, B --> C
+    A --> C
+    B --> C
 ```
 
 ## Installation
