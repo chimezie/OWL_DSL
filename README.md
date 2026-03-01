@@ -398,7 +398,7 @@ This can be extended to include any class that is not semantically useful for th
 involving these classes will be ignored by the `owl_dsl.reason` command.
 
 ### Explaining adhoc GCI Axioms ###
-Finally, the 'justify_gci' action of the `owl_dsl.reason` command-line tool can be used to provide a NL rendering
+The 'justify_gci' action of the `owl_dsl.reason` command-line tool can be used to provide a NL rendering
 of a proof or explanation of a GCI axiom involving a class identified by its IRI or label and an arbitrary OWL expression
 specified as valid Manchester OWL 2 syntax, a ["a user-friendly compact syntax for OWL 2 ontologies"](https://www.w3.org/TR/owl2-manchester-syntax/).  This is give with the `--manchester-owl-expression` option and this relies on 
 [owlapy's ability to parse Manchester expressions](https://dice-group.github.io/owlapy/usage/usage_examples.html#convert-to-sparql-dl-or-manchester-syntax).
