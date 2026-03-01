@@ -248,6 +248,7 @@ def verbalize_gci_justifications(handler: CNLRenderer,
                             print(f"{whitespace_prefix}If A is related to B via '{prop_label}' "
                                   f"then A is a '{domain_owl_class_label}'")
                         elif ' DisjointUnionOf ' in item.strip():
+                            print(item.strip())
                             raise NotImplementedError("DisjointUnionOf not yet supported")
                         elif ' Range ' in item.strip():
                             info = [*item.strip().split(' Range ')]
@@ -384,8 +385,11 @@ def main(action,
                     super_class_label = super_owl_class.label[0]
                     quoted_super_owl_class_label = f"'{super_class_label}'"
                     if str(super_class_label) not in handler.class_inference_to_ignore:
-                        verbalize_gci_justifications(handler, owl_class, owl_class_label, ontology, ontology_namespace_baseuri,
-                                                     owl_url_or_path, quoted_super_owl_class_label, verbose)
+                        try:
+                            verbalize_gci_justifications(handler, owl_class, owl_class_label, ontology, ontology_namespace_baseuri,
+                                                         owl_url_or_path, quoted_super_owl_class_label, verbose)
+                        except NotImplementedError as e:
+                            warnings.warn(f"Skipping GCI justification for {super_owl_class.iri}: {e}")
                 except IndexError as e:
                     warnings.warn(f"Skipping GCI justification for {super_owl_class} due to missing label: {e}")
             for owl_sub_class in reasoner.sub_classes(owl2apy_class):
@@ -397,8 +401,8 @@ def main(action,
                                                      owlr2_sub_class.label[0],
                                                      ontology, ontology_namespace_baseuri,
                                                      owl_url_or_path, owl_super_class_label, verbose)
-                    except IndexError as e:
-                        warnings.warn(f"Skipping GCI justification for {owl_sub_class.iri} due to missing label: {e}")
+                    except (NotImplementedError, IndexError) as e:
+                        warnings.warn(f"Skipping GCI justification for {owl_sub_class.iri}: {e}")
 
     elif action == 'justify_gci':
         handler, ontology = get_owlready2_ontology(ontology_uri, owl_url_or_path, sqlite_file)
