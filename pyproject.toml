@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "OWL_DSL"
-version = "0.1.0"
+version = "0.2.0"
 description = "Library for extracting Domain Specific Languages from OWL Ontologies (using owlready2)"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -25,13 +25,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
-[project.optional-dependencies]
-nlp = [
-  "spacy"
-]
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [project.scripts]
-"owl_dsl.corpus" = "owl_dsl.cli:main"
+"owl_dsl.review" = "owl_dsl.cli:main"
+"owl_dsl.reason" = "owl_dsl.reasoner:main"
