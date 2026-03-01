@@ -10,6 +10,19 @@
 # CNL configuration file fpr Uberon, with comments of its use with
 # the Foundational Model of Anatomy (FMA)
 
+#Classes too general to render while navigating entailed axioms
+class_inference_to_ignore: ['material anatomical entity',
+                            'anatomical entity',
+                            'anatomical structure',
+                            'multicellular anatomical structure',
+                            'molecular_function',
+                            'occurrent',
+                            'process',
+                            'independent continuant',
+                            'continuant',
+                            'material entity',
+                            'molecular entity']
+
 # owl:AnnotationProperty properties for term definitions
 tooling:
   expert_definition_properties: ['http://purl.obolibrary.org/obo/IAO_0000115', #Information Artifact Ontology (IAO) define
@@ -73,6 +86,26 @@ reflexive_roles:
 #Alternatively, only two custom CNL phrases can be provided, in which case the first is used for both singular and plural objects
 
 role_restriction_phrasing:
+  'http://purl.obolibrary.org/obo/uberon/core#channels_from':
+    - 'channels from {}'
+    - 'channels from {}'
+    - 'What channels from {}?'
+
+  'http://purl.obolibrary.org/obo/uberon/core#channel_for':
+    - 'is a channel for {}'
+    - 'is a channel for {}'
+    - 'What is a channel for {}?'
+
+  'http://purl.obolibrary.org/obo/BSPO_0015005':
+    - 'is a channel for {}'
+    - 'is a channel for {}'
+    - 'What is a channel for {}?'
+
+  'http://purl.obolibrary.org/obo/BSPO_0000120':
+    - 'is on the left side of {}'
+    - 'is on the left side of {}'
+    - 'What is {} on the left side of?'
+
   # existence starts during or after
   # x existence starts during or after y if and only if the time point at which x starts is after or equivalent to the
   # time point at which y starts. Formally: x existence starts during or after y iff α (x) >= α (y).
@@ -117,14 +150,6 @@ role_restriction_phrasing:
     - 'is an immediate transformation of {}'
     - 'is an immediate transformation of {}'
     - 'What is {} an immediate transformed of?'
-
-  # has component
-  # w &apos;has component&apos; p if w &apos;has part&apos; p and w is such that it can be directly disassembled into
-  # into n parts p, p2, p3, ..., pn, where these parts are of similar type.
-  'http://purl.obolibrary.org/obo/RO_0002180':
-    - 'has {} as its component'
-    - 'has {} as its components'
-    - 'What are the components of {}?'
 
   # existence ends during or before
   # x existence ends during or before y if and only if the time point at which x ends is before or equivalent to the
@@ -426,13 +451,13 @@ role_restriction_phrasing:
   # has primary input
   'http://purl.obolibrary.org/obo/RO_0004009':
     - 'has {} as its primary input'
-    - 'has {} as its primary input'
+    - 'has {} as its primary inputs'
     - 'What are the primary inputs of {}?'
-
-  'http://purl.obolibrary.org/obo/RO_0002372':
-    - 'has {} as a muscle origin'
-    - 'has {} as muscle origins'
-    - 'What are the muscle origins of {}?'
+  # has input
+  'http://purl.obolibrary.org/obo/RO_0002233':
+    - 'has {} as its input'
+    - 'has {} as its inputs'
+    - 'What are the inputs of {}?'
 
   # has muscle insertion
   # m has_muscle_insertion s iff m is attaches_to s, and it is the case that when m contracts, s moves.
@@ -527,11 +552,6 @@ role_restriction_phrasing:
     - 'has a high plasma membrane amount of {}'
     - 'has a high plasma membrane amount of {}'
     - 'What does {} have a high plasma membrane amount of?'
-
-  'http://purl.obolibrary.org/obo/CL_4030044':
-    - 'has not completed {}'
-    - 'has not completed {}'
-    - 'What has {} not completed?'
 
   'http://purl.obolibrary.org/obo/CL_4030046':
     - 'lacks a {} as a plasma membrane part'
@@ -731,59 +751,3 @@ role_restriction_phrasing:
     - 'is located in {}'
     - 'is located in {}'
     - 'Where is {} located?'
-#  insertion_of:
-#    - 'is an insertion of {}'
-#    - 'is an insertion of {}'
-#    - 'What is {} an insertion of?'
-#  has_projection:
-#    - 'has {} as a projection'
-#    - 'has {} as projections'
-#    - 'What are the projections of {}?'
-#  venous_drainage:
-#    - 'has {} as a venous drainage'
-#    - 'has {} as a venous drainage'
-#    - 'What is the venous drainage of {}?'
-#  direct_left_of:
-#  - 'is to the direct left of {}'
-#  - 'is to the direct left of {}'
-#  - 'What is the orientation of {}?'
-#  direct_right_of:
-#    - 'is to the direct right of {}'
-#    - 'is to the direct right of {}'
-#    - 'What is the orientation of {}?'
-#  input_from:
-#    - 'takes input from {}'
-#    - 'takes input from {}'
-#    - 'What does {} take input from?'
-#  efferent_to:
-#    - 'drains into {}'
-#    - 'drains into {}'
-#    - 'What does {} drain into?'
-#  afferent_to:
-#    - 'is continuous upstream with {}'
-#    - 'is continuous upstream with {}'
-#    - 'With what is {} continuous upstream?'
-#  fma0329350:
-#    - 'is continuous inferiorly with {}'
-#    - 'is continuous inferiorly with {}'
-#    - 'With what is {} continuous inferiorly?'
-#  fma0329349:
-#    - 'is continuous superiorly with {}'
-#    - 'is continuous superiorly with {}'
-#    - 'With what is {} continuous superiorly?'
-#  branch__continuity_:
-#    - 'has branch continuity with {}'
-#    - 'has branch continuity with {}'
-#    - 'With what does {} have branch continuity?'
-#  receives_projection:
-#    - 'receives projections from {}'
-#    - 'receives projections from {}'
-#    - 'From where does {} receive projections?'
-#  fusion_of:
-#    - 'is a fusion of {}'
-#    - 'is a fusion of {}'
-#    - 'With is {} a fusion of?'
-#  anatomical_entity_observed:
-#    - 'involves the {} anatomy'
-#    - 'involves the {} anatomy'
-#    - 'What is the anatomy involved in {}?'
