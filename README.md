@@ -41,7 +41,7 @@ These can be extended to allow for more expressive annotations about the object 
 flowchart LR
     A["configuration file"]
     B["ontology"]
-    C["NL phrasing of ontology semantics"]
+    C["NL phrasing of terms"]
     A --> C
     B --> C
 ```
