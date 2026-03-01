@@ -247,6 +247,8 @@ def verbalize_gci_justifications(handler: CNLRenderer,
                             domain_owl_class_label = _domain_owl_class.label[0]
                             print(f"{whitespace_prefix}If A is related to B via '{prop_label}' "
                                   f"then A is a '{domain_owl_class_label}'")
+                        elif ' DisjointUnionOf ' in item.strip():
+                            raise NotImplementedError("DisjointUnionOf not yet supported")
                         elif ' Range ' in item.strip():
                             info = [*item.strip().split(' Range ')]
                             prop, _range_owl_class = info
