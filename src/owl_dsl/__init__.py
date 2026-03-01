@@ -1,13 +1,13 @@
 """OWL_DSL - Library for extracting Domain Specific Languages from OWL (using Owlready2)"""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import warnings
 from typing import Union
 import types
 import owlready2
 from owlready2 import Restriction, owl, Construct, EntityClass, ThingClass, PropertyClass, LogicalClassConstruct, Or, \
-    And, Not, Inverse, OneOf, ConstrainedDatatype, PropertyChain
+    And, Not, Inverse, OneOf, ConstrainedDatatype, PropertyChain, IndividualValueList
 
 try:
     import spacy
@@ -166,3 +166,7 @@ def prefix_with_indefinite_article(term: str | None, unquoted:bool = True) -> st
             return _indefinite_article(term) + f" {term}"
         return f"{_indefinite_article(term)} " + _term
 
+
+def get_owl_class_label(owl_class: ThingClass) -> str | None:
+    labels: IndividualValueList = owl_class.label
+    return next((item for item in labels if isinstance(item, str)), None)
