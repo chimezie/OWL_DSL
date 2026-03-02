@@ -285,8 +285,10 @@ $ owl_dsl.review --ontology-uri "http://purl.obolibrary.org/obo/uberon/uberon-ba
 ```
 ## Reasoning ##
 
-The `owl_dsl.reason` command-line tool can be used to for various reasoning tasks over an ontology that leverage
-the NL rendering capabilities of OWL DSL to render axioms and their justifications in a human-readable format.
+The `owl_dsl.reason` command-line tool can be used to for various reasoning tasks over an ontology leveraging
+an [installation of robot](https://robot.obolibrary.org/) 
+and the NL rendering capabilities of OWL DSL library to render axioms in an ontology and their justifications in a 
+human-readable format.
 
 The full command-line options for `owl_dsl.reason` are:
 
@@ -322,8 +324,10 @@ Options:
 
 The 'explain_logical_inferences' action of the `owl_dsl.reason` command-line tool can be used to provide a NL rendering
 of a proof for logically entailed General Concept Inclusion (GCI) axioms of an ontology, i.e., 
-[rdfs:subClassOf](https://www.w3.org/TR/rdf11-schema/#ch_subclassof) or subsumption axioms. In particular, it will do 
-so for GCI axioms entailed by the ontology, ignoring those that are directly asserted in the ontology.
+[rdfs:subClassOf](https://www.w3.org/TR/rdf11-schema/#ch_subclassof) or subsumption axioms using the 
+[Elk reasoner](https://github.com/liveontologies/elk-reasoner) that comes with robot. In particular, it will render 
+logically entailed GCI axioms from a given ontology, ignoring those that are directly asserted in the ontology (OWL 
+super classes and sub classes).
 
 The starting point for this is an OWL class, specified by its local name or label as before using the `--class-reference` 
 and --by-id options.  Below is an example of how we can do this for the 'vestibular aqueduct' class from earlier:
