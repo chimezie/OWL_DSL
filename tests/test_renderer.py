@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import Mock
 from owlready2 import Restriction, base, And, Or, owl, ThingClass
 
+
 def test_render_simple_class(cnl_renderer, mock_person):
     """Test rendering of a basic named OWL class."""
     Person = cnl_renderer.ontology.search_one(iri="*Person")
@@ -30,14 +31,14 @@ def test_render_capitalized_class(cnl_renderer):
 def test_render_special_classes(cnl_renderer):
     """Test rendering of owl:Thing and owl:Nothing."""
     rendered_thing = cnl_renderer.render_owl_class(owl.Thing)
-    assert rendered_thing == "Everything", (
-        f"Expected 'Everything', got '{rendered_thing}'"
-    )
+    assert (
+        rendered_thing == "Everything"
+    ), f"Expected 'Everything', got '{rendered_thing}'"
 
     rendered_nothing = cnl_renderer.render_owl_class(owl.Nothing)
-    assert rendered_nothing == "Nothing", (
-        f"Expected 'Nothing', got '{rendered_nothing}'"
-    )
+    assert (
+        rendered_nothing == "Nothing"
+    ), f"Expected 'Nothing', got '{rendered_nothing}'"
 
 
 def test_render_intersection(cnl_renderer, mock_person, mock_animal):
@@ -155,7 +156,7 @@ def test_extract_definitional_phrases(cnl_renderer):
     mock_dog = Mock(spec=ThingClass)
     mock_dog.label = ["dog"]
     mock_dog.is_a = [Person]
-    
+
     # Add required attributes for groupby to work
     mock_dog.Classes = []
 
@@ -168,9 +169,9 @@ def test_extract_definitional_phrases(cnl_renderer):
         owl_class_name_phrase="the test dog",
     )
 
-    assert isinstance(definitional_phrases, list), (
-        f"Expected list, got {type(definitional_phrases)}"
-    )
+    assert isinstance(
+        definitional_phrases, list
+    ), f"Expected list, got {type(definitional_phrases)}"
 
 
 def test_concept_group_key(cnl_renderer):
@@ -229,30 +230,38 @@ def test_is_logical_construct_key(cnl_renderer):
 
     key = cnl_renderer.concept_group_key(intersection)
 
-    assert cnl_renderer.is_logical_construct_key(key), (
-        f"Expected logical construct key for {type(intersection)}"
-    )
+    assert cnl_renderer.is_logical_construct_key(
+        key
+    ), f"Expected logical construct key for {type(intersection)}"
 
 
 def test_is_restriction_key(cnl_renderer):
     """Test identification of restriction keys."""
     # The is_restriction_key method checks if a key falls within the range
     # RESTRICTION_START_KEY to RESTRICTION_START_KEY + len(property_iris)
-    
+
     if len(cnl_renderer.property_iris) > 0:
         # Test with a key that falls in the restriction range
         test_key = cnl_renderer.RESTRICTION_START_KEY + 1
-        assert cnl_renderer.is_restriction_key(test_key), f"Expected {test_key} to be a restriction key"
-        
+        assert cnl_renderer.is_restriction_key(
+            test_key
+        ), f"Expected {test_key} to be a restriction key"
+
         # Test with a key outside the restriction range (should not be restriction)
-        non_restriction_key = cnl_renderer.RESTRICTION_START_KEY + len(cnl_renderer.property_iris) + 10
-        assert (not cnl_renderer.is_restriction_key(non_restriction_key),
-                f"Expected {non_restriction_key} to NOT be a restriction key")
+        non_restriction_key = (
+            cnl_renderer.RESTRICTION_START_KEY + len(cnl_renderer.property_iris) + 10
+        )
+        assert (
+            not cnl_renderer.is_restriction_key(non_restriction_key),
+            f"Expected {non_restriction_key} to NOT be a restriction key",
+        )
     else:
         # If no properties, just verify the method doesn't crash
         test_key = cnl_renderer.RESTRICTION_START_KEY + 5
-        assert (not cnl_renderer.is_restriction_key(test_key),
-                f"Expected {test_key} to NOT be a restriction key when property_iris is empty")
+        assert (
+            not cnl_renderer.is_restriction_key(test_key),
+            f"Expected {test_key} to NOT be a restriction key when property_iris is empty",
+        )
 
 
 def test_pretty_print_list(cnl_renderer):

@@ -2,14 +2,37 @@ import warnings
 from itertools import groupby
 from typing import Union, List, Iterable
 
-from owlready2 import Ontology, get_namespace, default_world, Construct, EntityClass, LogicalClassConstruct, \
-    Restriction, ThingClass, Not, owl, PropertyClass, Or, And, Inverse, base, OneOf, ConstrainedDatatype, PropertyChain, \
-    rdfs_datatype, ClassConstruct, DataPropertyClass, HAS_SELF, ObjectPropertyClass
+from owlready2 import (
+    Ontology,
+    get_namespace,
+    default_world,
+    Construct,
+    EntityClass,
+    LogicalClassConstruct,
+    Restriction,
+    ThingClass,
+    Not,
+    owl,
+    PropertyClass,
+    Or,
+    And,
+    Inverse,
+    base,
+    OneOf,
+    ConstrainedDatatype,
+    PropertyChain,
+    rdfs_datatype,
+    ClassConstruct,
+    DataPropertyClass,
+    HAS_SELF,
+    ObjectPropertyClass,
+)
 from rdflib import Namespace, URIRef
 
 from owl_dsl import pretty_print_list, prefix_with_indefinite_article
 
 PROPERTIES_TO_SKIP = []
+
 
 class CNLRenderer:
     """
@@ -28,17 +51,20 @@ class CNLRenderer:
         custom_role_rendering (bool): Whether to use custom role rendering for CNL phrases (uses DL form instead).
         ontology_title (str): Title of the ontology.
     """
-    #Used to help group common constructs together for rendering purposes
+
+    # Used to help group common constructs together for rendering purposes
     LOGICAL_COMPLEMENT_KEY = 0
     LOGICAL_CONSTRUCT_KEY = 1
     RESTRICTION_START_KEY = 2
 
-    def __init__(self,
-                 ontology: Ontology,
-                 ontology_namespace: str,
-                 verbose:bool = False,
-                 custom_role_rendering:bool = True,
-                 lowercase_labels: bool = True):
+    def __init__(
+        self,
+        ontology: Ontology,
+        ontology_namespace: str,
+        verbose: bool = False,
+        custom_role_rendering: bool = True,
+        lowercase_labels: bool = True,
+    ):
         self.ontology = ontology
         self.definition_info = {}
         self.property_iris = [p.iri for p in sorted(self.ontology.properties())]
@@ -54,8 +80,10 @@ class CNLRenderer:
         self.class_inference_to_ignore = []
         self.ontology_title = None
         self.lowercase_labels = lowercase_labels
-        for (title,) in default_world.sparql_query(f"SELECT ?ontology_title "
-                                                         f"{{ ?ontology a owl:Ontology; dc:title ?ontology_title }}"):
+        for (title,) in default_world.sparql_query(
+            f"SELECT ?ontology_title "
+            f"{{ ?ontology a owl:Ontology; dc:title ?ontology_title }}"
+        ):
             self.ontology_title = title
 
     def is_logical_construct_key(self, key: int) -> bool:
@@ -68,7 +96,11 @@ class CNLRenderer:
         """
         Determines if the provided key is for a restriction
         """
-        return self.RESTRICTION_START_KEY <= key < self.RESTRICTION_START_KEY + len(self.property_iris)
+        return (
+            self.RESTRICTION_START_KEY
+            <= key
+            < self.RESTRICTION_START_KEY + len(self.property_iris)
+        )
 
     def is_named_owl_class_key(self, key: int) -> bool:
         """
@@ -84,15 +116,19 @@ class CNLRenderer:
             return self.LOGICAL_CONSTRUCT_KEY
         elif isinstance(concept, Restriction):
             # Distinguish restrictions by their owl:onProperty value
-            return self.RESTRICTION_START_KEY + self.property_iris.index(concept.property.iri)
+            return self.RESTRICTION_START_KEY + self.property_iris.index(
+                concept.property.iri
+            )
         elif isinstance(concept, ThingClass):
             return self.RESTRICTION_START_KEY + len(self.property_iris)
         elif isinstance(concept, Not):
-                return self.LOGICAL_COMPLEMENT_KEY
+            return self.LOGICAL_COMPLEMENT_KEY
         else:
             raise NotImplementedError(concept)
 
-    def handle_first_definitional_phrase(self, definitional_phrases: List[str], name: str) -> str:
+    def handle_first_definitional_phrase(
+        self, definitional_phrases: List[str], name: str
+    ) -> str:
         """
         Returns rendering of a name based on if it is the first definitional phrase and the ontology title, if present
 
@@ -103,14 +139,20 @@ class CNLRenderer:
             definitional phrases and the presence or absence of an ontology title.
         """
         if self.ontology_title:
-            return "It" if definitional_phrases else f"The {name} is defined in {self.ontology_title} as"
+            return (
+                "It"
+                if definitional_phrases
+                else f"The {name} is defined in {self.ontology_title} as"
+            )
         else:
             return "It" if definitional_phrases else f"The {name} is defined as"
 
-    def render_readable_owl_class(self,
-                                  owl_class: ThingClass,
-                                  capitalize_first_letter = False,
-                                  no_indef_article = True) -> str:
+    def render_readable_owl_class(
+        self,
+        owl_class: ThingClass,
+        capitalize_first_letter=False,
+        no_indef_article=True,
+    ) -> str:
         """
         Renders an OWL class based on specified configuration options. The function handles both simple
         OWL classes as well as logical class constructs. The main principle of how it is rendering is English
@@ -138,24 +180,36 @@ class CNLRenderer:
             else:
                 # First and second joined with ' that ', rest joined with ' and '
                 result = f"{owl_class_names[0]} that {owl_class_names[1]}"
-                return result + f" and {pretty_print_list(owl_class_names[2:], and_char = ', and ')}"
+                return (
+                    result
+                    + f" and {pretty_print_list(owl_class_names[2:], and_char = ', and ')}"
+                )
         else:
             if owl_class.label:
                 owl_class_label = owl_class.label[0]
                 if no_indef_article:
                     name = f"{owl_class_label}"
                 else:
-                    prefixed_name = prefix_with_indefinite_article(owl_class_label).capitalize()
+                    prefixed_name = prefix_with_indefinite_article(
+                        owl_class_label
+                    ).capitalize()
                     name = prefixed_name
             else:
                 name = "" if no_indef_article else f"the {str(owl_class.label[0])}"
             if name.strip():
-                name = name if capitalize_first_letter else (name[0].lower() if self.lowercase_labels
-                                                             else name[0]) + name[1:]
+                name = (
+                    name
+                    if capitalize_first_letter
+                    else (name[0].lower() if self.lowercase_labels else name[0])
+                    + name[1:]
+                )
             else:
                 name = None
             return name
-    def render_owl_class(self, owl_class: Union[Construct, EntityClass], anonymous: bool = False) -> str:
+
+    def render_owl_class(
+        self, owl_class: Union[Construct, EntityClass], anonymous: bool = False
+    ) -> str:
         """
         Renders an OWL class into a string representation based on its type and structure, using owlready2 to
         handle the structure of a variety of OWL constructs.  Derived from owlready2's dl_render_concept_str
@@ -189,9 +243,9 @@ class CNLRenderer:
                 else:
                     s.append(self.render_owl_class(x))
             if isinstance(owl_class, Or):
-                return pretty_print_list(s, and_char = ", or ")
+                return pretty_print_list(s, and_char=", or ")
             if isinstance(owl_class, And):
-                return pretty_print_list(s, and_char = ", and ")
+                return pretty_print_list(s, and_char=", and ")
         if isinstance(owl_class, Not):
             raise NotImplementedError
         if isinstance(owl_class, Inverse):
@@ -201,7 +255,9 @@ class CNLRenderer:
             # SOME:
             # VALUE:
             prop_iri = owl_class.property.iri
-            custom_phrases = self.relevant_role_restriction_cnl_phrasing.get(URIRef(prop_iri))
+            custom_phrases = self.relevant_role_restriction_cnl_phrasing.get(
+                URIRef(prop_iri)
+            )
             if owl_class.type == base.SOME:
                 restriction_value = self.render_readable_owl_class(owl_class.value)
                 value_name = prefix_with_indefinite_article(restriction_value)
@@ -217,22 +273,31 @@ class CNLRenderer:
             if owl_class.type == base.ONLY:
                 raise NotImplementedError
             if owl_class.type == base.VALUE:
-                return "%s .{%s}" % (self.render_owl_class(owl_class.property),
-                                     owl_class.value.name
-                                     if isinstance(owl_class.value, owl.Thing) else owl_class.value)
+                return "%s .{%s}" % (
+                    self.render_owl_class(owl_class.property),
+                    (
+                        owl_class.value.name
+                        if isinstance(owl_class.value, owl.Thing)
+                        else owl_class.value
+                    ),
+                )
             if owl_class.type == base.HAS_SELF:
                 raise NotImplementedError
             if owl_class.type == base.EXACTLY:
                 prop_label = str(owl_class.property.label[0])
                 prefix = "" if anonymous else "is "
-                return (f"{prefix}{prop_label} exactly {owl_class.cardinality} "
-                        f"{self.render_readable_owl_class(owl_class.value)}")
+                return (
+                    f"{prefix}{prop_label} exactly {owl_class.cardinality} "
+                    f"{self.render_readable_owl_class(owl_class.value)}"
+                )
 
             if owl_class.type == base.MIN:
                 prop_label = str(owl_class.property.label[0])
                 prefix = "" if anonymous else "is "
-                return (f"{prefix}{prop_label} at least {owl_class.cardinality} "
-                        f"{self.render_readable_owl_class(owl_class.value)}")
+                return (
+                    f"{prefix}{prop_label} at least {owl_class.cardinality} "
+                    f"{self.render_readable_owl_class(owl_class.value)}"
+                )
             if owl_class.type == base.MAX:
                 raise NotImplementedError
         if isinstance(owl_class, OneOf):
@@ -241,14 +306,15 @@ class CNLRenderer:
             raise NotImplementedError
         if isinstance(owl_class, PropertyChain):
             raise NotImplementedError
-        if rdfs_datatype in [some_owl_class.storid for some_owl_class in owl_class.is_a]:  # rdfs:Datatype
+        if rdfs_datatype in [
+            some_owl_class.storid for some_owl_class in owl_class.is_a
+        ]:  # rdfs:Datatype
             return owl_class.name
         raise NotImplementedError
 
-    def extract_conjunction_phrases(self,
-                                    owl_class: ClassConstruct,
-                                    definitional_phrases: List[str],
-                                    name: str):
+    def extract_conjunction_phrases(
+        self, owl_class: ClassConstruct, definitional_phrases: List[str], name: str
+    ):
         """
         Extracts and organizes conjunction phrases based on an OWL class structure. The method processes
         instances of the provided OWL class to categorize and aggregate named and unnamed class blocks,
@@ -264,35 +330,48 @@ class CNLRenderer:
         """
         named_owl_class_block = []
         unnamed_owl_class_block = []
-        for is_named_owl_class, _group in groupby(owl_class.Classes,
-                                              lambda i: self.is_named_owl_class_key(self.concept_group_key(i))):
+        for is_named_owl_class, _group in groupby(
+            owl_class.Classes,
+            lambda i: self.is_named_owl_class_key(self.concept_group_key(i)),
+        ):
             if is_named_owl_class:
                 for owl_class in _group:
                     named_owl_class_block.append(
-                        prefix_with_indefinite_article(self.render_owl_class(owl_class)))
+                        prefix_with_indefinite_article(self.render_owl_class(owl_class))
+                    )
             else:
                 for owl_class in _group:
-                    unnamed_owl_class_block.append(self.render_owl_class(owl_class, anonymous = True))
+                    unnamed_owl_class_block.append(
+                        self.render_owl_class(owl_class, anonymous=True)
+                    )
         if named_owl_class_block and unnamed_owl_class_block:
-            prefix = pretty_print_list(named_owl_class_block, and_char = ", and ")
-            suffix = pretty_print_list(unnamed_owl_class_block, and_char = ", and ")
-            name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, name)
+            prefix = pretty_print_list(named_owl_class_block, and_char=", and ")
+            suffix = pretty_print_list(unnamed_owl_class_block, and_char=", and ")
+            name_or_pronoun = self.handle_first_definitional_phrase(
+                definitional_phrases, name
+            )
             definitional_phrases.append(f"{name_or_pronoun} {prefix} that {suffix}")
         elif named_owl_class_block:
-            name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, name)
-            block_phrase = pretty_print_list(named_owl_class_block, and_char = ", and ")
+            name_or_pronoun = self.handle_first_definitional_phrase(
+                definitional_phrases, name
+            )
+            block_phrase = pretty_print_list(named_owl_class_block, and_char=", and ")
             definitional_phrases.append(f"{name_or_pronoun} {block_phrase}")
         else:
-            name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, name)
-            phrase = pretty_print_list(unnamed_owl_class_block, and_char = ", and ")
+            name_or_pronoun = self.handle_first_definitional_phrase(
+                definitional_phrases, name
+            )
+            phrase = pretty_print_list(unnamed_owl_class_block, and_char=", and ")
             definitional_phrases.append(f"{name_or_pronoun} {phrase}")
 
-    def extract_definitional_phrases(self,
-                                     definitional_phrases: List,
-                                     owl_classes: Iterable[ClassConstruct],
-                                     owl_class_definition: str,
-                                     owl_class_id: str,
-                                     owl_class_name_phrase):
+    def extract_definitional_phrases(
+        self,
+        definitional_phrases: List,
+        owl_classes: Iterable[ClassConstruct],
+        owl_class_definition: str,
+        owl_class_id: str,
+        owl_class_name_phrase,
+    ):
         """
         Extract definitional phrases from a given set of OWL classes, and construct descriptive
         English sentences that express the relationships and logical constructs among the
@@ -312,30 +391,51 @@ class CNLRenderer:
         :return: None.
         """
         owl_class_def_info = self.definition_info.setdefault(owl_class_id, {})
-        for key, group in groupby(sorted(owl_classes, key=self.concept_group_key,
-                                         reverse=True), key=self.concept_group_key):
+        for key, group in groupby(
+            sorted(owl_classes, key=self.concept_group_key, reverse=True),
+            key=self.concept_group_key,
+        ):
             if self.is_logical_construct_key(key):
                 # Logical construct (It is a/an (A OR B OR C) or It is a/an (A AND B AND C))
                 for owl_class in group:
                     if isinstance(owl_class, Or):
-                        name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases,
-                                                                                owl_class_definition)
-                        disjunction = pretty_print_list([*map(lambda i: prefix_with_indefinite_article(
-                            self.render_owl_class(i)), owl_class.Classes)],
-                                                        and_char = ", or ")
-                        definitional_phrases.append(f"{name_or_pronoun} is {disjunction}")
+                        name_or_pronoun = self.handle_first_definitional_phrase(
+                            definitional_phrases, owl_class_definition
+                        )
+                        disjunction = pretty_print_list(
+                            [
+                                *map(
+                                    lambda i: prefix_with_indefinite_article(
+                                        self.render_owl_class(i)
+                                    ),
+                                    owl_class.Classes,
+                                )
+                            ],
+                            and_char=", or ",
+                        )
+                        definitional_phrases.append(
+                            f"{name_or_pronoun} is {disjunction}"
+                        )
                     else:  # Conjunctions
-                        self.extract_conjunction_phrases(owl_class, definitional_phrases, owl_class_definition)
+                        self.extract_conjunction_phrases(
+                            owl_class, definitional_phrases, owl_class_definition
+                        )
             elif self.is_restriction_key(key):
                 # Restriction block
                 for prop_iri, _group in groupby(group, lambda i: i.property.iri):
                     if prop_iri in map(str, PROPERTIES_TO_SKIP):
                         continue
-                    cnl_phrase = self.relevant_role_restriction_cnl_phrasing.get(URIRef(prop_iri))
-                    custom_render_fn = self.custom_restriction_property_rendering.get(URIRef(prop_iri))
+                    cnl_phrase = self.relevant_role_restriction_cnl_phrasing.get(
+                        URIRef(prop_iri)
+                    )
+                    custom_render_fn = self.custom_restriction_property_rendering.get(
+                        URIRef(prop_iri)
+                    )
                     if custom_render_fn:
                         custom_render_fn, prompt = custom_render_fn
-                        name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, owl_class_definition)
+                        name_or_pronoun = self.handle_first_definitional_phrase(
+                            definitional_phrases, owl_class_definition
+                        )
                         for owl_class in _group:
                             try:
                                 phrase = custom_render_fn(owl_class.value)
@@ -344,56 +444,95 @@ class CNLRenderer:
                                 continue
                             else:
                                 definitional_phrase = f"{name_or_pronoun} {phrase}"
-                                owl_class_def_info[prompt.format(owl_class_name_phrase)] = definitional_phrase
+                                owl_class_def_info[
+                                    prompt.format(owl_class_name_phrase)
+                                ] = definitional_phrase
                                 definitional_phrases.append(definitional_phrase)
                     elif cnl_phrase:
                         singular_phrase, plural_phrase, prompt = cnl_phrase
                         values = []
                         for owl_class in _group:
                             concept_name = self.render_owl_class(owl_class.value)
-                            values.append(prefix_with_indefinite_article(concept_name)
-                                          if URIRef(prop_iri) not in self.role_restriction_wo_articles else concept_name)
-                        name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, owl_class_definition)
-                        values_list = pretty_print_list(values, and_char = ", and ")
+                            values.append(
+                                prefix_with_indefinite_article(concept_name)
+                                if URIRef(prop_iri)
+                                not in self.role_restriction_wo_articles
+                                else concept_name
+                            )
+                        name_or_pronoun = self.handle_first_definitional_phrase(
+                            definitional_phrases, owl_class_definition
+                        )
+                        values_list = pretty_print_list(values, and_char=", and ")
                         if callable(singular_phrase):
                             singular_phrase = singular_phrase(values_list)
                             plural_phrase = plural_phrase(values_list)
-                        phrase = (plural_phrase if len(values) > 1 else singular_phrase).format(values_list)
+                        phrase = (
+                            plural_phrase if len(values) > 1 else singular_phrase
+                        ).format(values_list)
                         definitional_phrase = f"{name_or_pronoun} {phrase}"
-                        owl_class_def_info[prompt.format(owl_class_name_phrase)] = definitional_phrase
+                        owl_class_def_info[prompt.format(owl_class_name_phrase)] = (
+                            definitional_phrase
+                        )
                         definitional_phrases.append(definitional_phrase)
                     else:
                         prop = self.ontology.search(iri=prop_iri)[0]
                         if not isinstance(prop, DataPropertyClass) and prop.label:
                             # print(f"#### {prop.iri} ###")
-                            name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, owl_class_definition)
+                            name_or_pronoun = self.handle_first_definitional_phrase(
+                                definitional_phrases, owl_class_definition
+                            )
                             prop_label = str(prop.label[0])
                             values = []
                             for owl_class in _group:
-                                if isinstance(owl_class.value, ThingClass) and owl_class.type == HAS_SELF:
-                                    if URIRef(prop.iri) in self.reflexive_property_customization:
-                                        values.append(self.reflexive_property_customization[URIRef(prop.iri)])
+                                if (
+                                    isinstance(owl_class.value, ThingClass)
+                                    and owl_class.type == HAS_SELF
+                                ):
+                                    if (
+                                        URIRef(prop.iri)
+                                        in self.reflexive_property_customization
+                                    ):
+                                        values.append(
+                                            self.reflexive_property_customization[
+                                                URIRef(prop.iri)
+                                            ]
+                                        )
                                     else:
                                         values.append(f"{prop_label} itself")
                                 else:
-                                    values.append(prefix_with_indefinite_article(
-                                        self.render_readable_owl_class(owl_class.value)))
-                            values_phrase = pretty_print_list(values, and_char = ", and ")
+                                    values.append(
+                                        prefix_with_indefinite_article(
+                                            self.render_readable_owl_class(
+                                                owl_class.value
+                                            )
+                                        )
+                                    )
+                            values_phrase = pretty_print_list(values, and_char=", and ")
                             phrase = f"{prop_label} {values_phrase}"
                             definitional_phrase = f"{name_or_pronoun} {phrase}"
-                            owl_class_def_info[f'What is {owl_class_name_phrase} {prop_label}?'] = definitional_phrase
+                            owl_class_def_info[
+                                f"What is {owl_class_name_phrase} {prop_label}?"
+                            ] = definitional_phrase
                             definitional_phrases.append(definitional_phrase)
                         else:
                             warnings.warn(f"Unsupported property type: {prop}")
             elif self.is_named_owl_class_key(key):
                 # ThingClass
                 for owl_class in group:
-                    name_or_pronoun = self.handle_first_definitional_phrase(definitional_phrases, owl_class_definition)
-                    parent_name = self.render_readable_owl_class(owl_class, no_indef_article = True)
+                    name_or_pronoun = self.handle_first_definitional_phrase(
+                        definitional_phrases, owl_class_definition
+                    )
+                    parent_name = self.render_readable_owl_class(
+                        owl_class, no_indef_article=True
+                    )
                     if parent_name is None:
                         continue
                     parent_name = prefix_with_indefinite_article(parent_name)
-                    name_or_pronoun = f"{name_or_pronoun} is" if name_or_pronoun == "It" else name_or_pronoun
+                    name_or_pronoun = (
+                        f"{name_or_pronoun} is"
+                        if name_or_pronoun == "It"
+                        else name_or_pronoun
+                    )
                     definitional_phrases.append(f"{name_or_pronoun} {parent_name}")
 
     def handle_owl_class(self, owl_class: ThingClass) -> str:
@@ -408,31 +547,42 @@ class CNLRenderer:
         """
         owl_class_id = owl_class.iri.split(self.ontology_namespace)[-1]
         owl_class_name_phrase = f"the {str(owl_class.label[0])}"
-        owl_class_definition = self.render_readable_owl_class(owl_class, capitalize_first_letter = True).strip()
+        owl_class_definition = self.render_readable_owl_class(
+            owl_class, capitalize_first_letter=True
+        ).strip()
         definitional_phrases = []
         if owl_class.equivalent_to:
-            self.extract_definitional_phrases(definitional_phrases,
-                                              owl_class.equivalent_to,
-                                              owl_class_definition,
-                                              owl_class_id,
-                                              owl_class_name_phrase)
+            self.extract_definitional_phrases(
+                definitional_phrases,
+                owl_class.equivalent_to,
+                owl_class_definition,
+                owl_class_id,
+                owl_class_name_phrase,
+            )
         if owl_class.is_a:
-            self.extract_definitional_phrases(definitional_phrases,
-                                              owl_class.is_a,
-                                              owl_class_definition,
-                                              owl_class_id,
-                                              owl_class_name_phrase)
+            self.extract_definitional_phrases(
+                definitional_phrases,
+                owl_class.is_a,
+                owl_class_definition,
+                owl_class_id,
+                owl_class_name_phrase,
+            )
         definition = f". ".join(map(str.strip, definitional_phrases))
         return definition
 
-    def render_role_restriction(self,
-                                object_property_owl_class: ObjectPropertyClass,
-                                operand1: str = "A",
-                                operand2: str = "B") -> str:
-        custom_phrases = self.relevant_role_restriction_cnl_phrasing.get(URIRef(object_property_owl_class.iri))
+    def render_role_restriction(
+        self,
+        object_property_owl_class: ObjectPropertyClass,
+        operand1: str = "A",
+        operand2: str = "B",
+    ) -> str:
+        custom_phrases = self.relevant_role_restriction_cnl_phrasing.get(
+            URIRef(object_property_owl_class.iri)
+        )
         if custom_phrases and self.custom_role_rendering:
             property_phrase = f"{operand1} {custom_phrases[0].format(operand2)}"
         else:
-            property_phrase = f"{operand1} '{str(object_property_owl_class.label[0])}' {operand2}"
+            property_phrase = (
+                f"{operand1} '{str(object_property_owl_class.label[0])}' {operand2}"
+            )
         return property_phrase
-

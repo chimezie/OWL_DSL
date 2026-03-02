@@ -6,16 +6,32 @@ import warnings
 from typing import Union
 import types
 import owlready2
-from owlready2 import Restriction, owl, Construct, EntityClass, ThingClass, PropertyClass, LogicalClassConstruct, Or, \
-    And, Not, Inverse, OneOf, ConstrainedDatatype, PropertyChain, IndividualValueList
+from owlready2 import (
+    Restriction,
+    owl,
+    Construct,
+    EntityClass,
+    ThingClass,
+    PropertyClass,
+    LogicalClassConstruct,
+    Or,
+    And,
+    Not,
+    Inverse,
+    OneOf,
+    ConstrainedDatatype,
+    PropertyChain,
+    IndividualValueList,
+)
 
 try:
     import spacy
+
     nlp = spacy.load("en_core_web_sm")
 except (OSError, ImportError):
     nlp = None
 
-VOWELS = 'aeiou'
+VOWELS = "aeiou"
 
 _FACETS = {
     "length": "length",
@@ -30,7 +46,7 @@ _FACETS = {
     "fraction_digits": "fractionDigits",
 }
 
-#Redefined from owlready2.dl_render in order to redefine dl_render_concept_str
+# Redefined from owlready2.dl_render in order to redefine dl_render_concept_str
 _DL_SYNTAX = types.SimpleNamespace(
     SUBCLASS="⊑",
     EQUIVALENT_TO="≡",
@@ -55,9 +71,10 @@ _DL_SYNTAX = types.SimpleNamespace(
     SELF="self",
 )
 
+
 def base_uri(uri: str) -> tuple[str, str]:
     """Returns a tuple containing the base URI and the remaining portion."""
-    index = uri.rfind('/') + 1
+    index = uri.rfind("/") + 1
     return uri[:index], uri[index:]
 
 
@@ -76,13 +93,19 @@ def _render_restriction(concept: Restriction) -> str:
     rendered_property = dl_render_concept_str(concept.property)
 
     if concept.type == owlready2.base.VALUE:
-        value_str = concept.value.name if isinstance(concept.value, owl.Thing) else concept.value
+        value_str = (
+            concept.value.name
+            if isinstance(concept.value, owl.Thing)
+            else concept.value
+        )
         return f"{_DL_SYNTAX.EXISTS} {rendered_property} .{{{value_str}}}"
 
     rendered_value = dl_render_concept_str(concept.value)
     formatter = _RESTRICTION_TYPE_FORMATS.get(concept.type)
     if formatter is not None:
-        return formatter(rendered_property, rendered_value, getattr(concept, 'cardinality', None))
+        return formatter(
+            rendered_property, rendered_value, getattr(concept, "cardinality", None)
+        )
 
     raise NotImplementedError(f"Unknown restriction type: {concept.type}")
 
@@ -95,7 +118,7 @@ def dl_render_concept_str(concept: Union[Construct, EntityClass]) -> str:
             return _DL_SYNTAX.TOP
         if concept is owl.Nothing:
             return _DL_SYNTAX.BOTTOM
-        #Updated to return properly labeled concept
+        # Updated to return properly labeled concept
         return f"{concept.name}{' ({})'.format(str(concept.label[0])) if concept.label else ''}"
     if isinstance(concept, PropertyClass):
         return concept.name
@@ -117,49 +140,65 @@ def dl_render_concept_str(concept: Union[Construct, EntityClass]) -> str:
     if isinstance(concept, Restriction):
         return _render_restriction(concept)
     if isinstance(concept, OneOf):
-        return "{%s}" % (" %s " % _DL_SYNTAX.OR).join("%s" % (item.name if isinstance(item, owl.Thing)
-                                                              else item) for item in concept.instances)
+        return "{%s}" % (" %s " % _DL_SYNTAX.OR).join(
+            "%s" % (item.name if isinstance(item, owl.Thing) else item)
+            for item in concept.instances
+        )
     if isinstance(concept, ConstrainedDatatype):
         s = []
         for k in _FACETS:
             v = getattr(concept, k, None)
             if not v is None:
                 s.append("%s %s" % (_FACETS[k], v))
-        return "%s[%s]" % (concept.base_datatype.__name__, (" %s " % _DL_SYNTAX.COMMA).join(s))
+        return "%s[%s]" % (
+            concept.base_datatype.__name__,
+            (" %s " % _DL_SYNTAX.COMMA).join(s),
+        )
     if isinstance(concept, PropertyChain):
-        return (" %s " % _DL_SYNTAX.COMP).join(dl_render_concept_str(property) for property in concept.properties)
+        return (" %s " % _DL_SYNTAX.COMP).join(
+            dl_render_concept_str(property) for property in concept.properties
+        )
     if concept in owlready2.base._universal_datatype_2_abbrev:
-        iri = owlready2.base._universal_abbrev_2_iri.get(owlready2.base._universal_datatype_2_abbrev.get(concept))
+        iri = owlready2.base._universal_abbrev_2_iri.get(
+            owlready2.base._universal_datatype_2_abbrev.get(concept)
+        )
         if iri.startswith("http://www.w3.org/2001/XMLSchema#"):
             return "xsd:" + iri[33:]
-        hash, slash = iri.rindex('#'), iri.rindex('/')
-        return iri[max(hash, slash)+1:]
-    if owlready2.rdfs_datatype in [some_class.storid for some_class in concept.is_a]: # rdfs:Datatype
+        hash, slash = iri.rindex("#"), iri.rindex("/")
+        return iri[max(hash, slash) + 1 :]
+    if owlready2.rdfs_datatype in [
+        some_class.storid for some_class in concept.is_a
+    ]:  # rdfs:Datatype
         return concept.name
     raise NotImplementedError(concept)
 
 
-def pretty_print_list(my_list, sep=", ", and_char=", & ", binary_op='and'):
-    return and_char.join([sep.join(my_list[:-1]), my_list[-1]]) \
-        if len(my_list) > 2 else '{} {} {}'.format(
-        my_list[0], binary_op, my_list[1]
-    ) if len(my_list) == 2 else my_list[0]
+def pretty_print_list(my_list, sep=", ", and_char=", & ", binary_op="and"):
+    return (
+        and_char.join([sep.join(my_list[:-1]), my_list[-1]])
+        if len(my_list) > 2
+        else (
+            "{} {} {}".format(my_list[0], binary_op, my_list[1])
+            if len(my_list) == 2
+            else my_list[0]
+        )
+    )
 
 
 def _indefinite_article(word: str) -> str:
     return "an" if word and word[0].lower() in VOWELS else "a"
 
 
-def prefix_with_indefinite_article(term: str | None, unquoted:bool = True) -> str:
+def prefix_with_indefinite_article(term: str | None, unquoted: bool = True) -> str:
     if term is None:
         return "something"
     else:
         _term = term if unquoted else f"'{term}'"
         if not nlp is None:
             for idx, token in enumerate(nlp(term)):
-                if token.tag_ == 'VBG':
+                if token.tag_ == "VBG":
                     return _term
-                elif token.tag_ == 'NN' and idx == len(nlp(term)) - 1:
+                elif token.tag_ == "NN" and idx == len(nlp(term)) - 1:
                     return f"{_indefinite_article(term)} " + _term
         else:
             warnings.warn("nlp not initialized")
