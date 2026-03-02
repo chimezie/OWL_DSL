@@ -12,7 +12,6 @@ but supports many aspects of other profiles as well.
 - [Loading Ontology](#loading-ontology)
 - [Rendering Classes](#rendering-classes)
 - [Listing Properties](#listing-properties)
-- [Curate OWL DSLs](#curate-owl-dsls)
 - [Reasoning](#reasoning)
 
 ## Introduction 
@@ -284,20 +283,6 @@ $ owl_dsl.review --ontology-uri "http://purl.obolibrary.org/obo/uberon/uberon-ba
 	- The endothelial cell of respiratory system lymphatic vessel is defined in Uber-anatomy ontology as an endothelial cell that is part of a respiratory system lymphatic vessel. It is an endothelial cell of lymphatic vessel. It is part of a respiratory system lymphatic vessel endothelium
 [..snip..]                 
 ```
-
-## Curate OWL DSLs
-You can use a combination of the `find_properties` and `render_class` actions to browse the vocabulary of the ontology.
-and find _"verbalizations"_ of the ontology terms that are awkward, identify the roles involved in the restriction 
-expression used to render those awkward phrases, and update the CNL configuration with corresponding entries.  Without
-such a configuration, the fallback approach to rendering an existential role restriction is to use this pattern:
-
-```
-is {prop_label} {value_name}"
-```
-Where `prop_label` is the label of the property being restricted and `value_name` is the name of the value in the restriction.
-
-The most basic configuration is to add the property URI to the `standard_role_restriction_is_phrasing` directive.
-
 ## Reasoning ##
 
 The `owl_dsl.reason` command-line tool can be used to for various reasoning tasks over an ontology that leverage
