@@ -1,6 +1,6 @@
 """OWL_DSL - Library for extracting Domain Specific Languages from OWL (using Owlready2)"""
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 
 import warnings
 from typing import Union
