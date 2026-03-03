@@ -201,7 +201,7 @@ def prefix_with_indefinite_article(term: str | None, unquoted: bool = True) -> s
                 elif token.tag_ == "NN" and idx == len(nlp(term)) - 1:
                     return f"{_indefinite_article(term)} " + _term
         else:
-            warnings.warn("nlp not initialized")
+            # warnings.warn("nlp not initialized")
             return _indefinite_article(term) + f" {term}"
         return f"{_indefinite_article(term)} " + _term
 
