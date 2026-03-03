@@ -85,7 +85,7 @@ $ owl_dsl.review --help
 Usage: owl_dsl.review [OPTIONS] [OWL_URL_OR_PATH]
 
 Options:
-  -a, --action [render_class|find_properties|load_owl|destroy_sqlite|find_classes]
+  -a, --action [render_class|find_properties|load_owl|destroy_sqlite|find_classes|list_ontologies]
                                   Action to perform  [required]
   --by-id                         Find ontology class by ID (otherwise by
                                   rdfs:label)
@@ -98,7 +98,7 @@ Options:
                                   Render OWL class labels as is (don't convert
                                   to lower case by default)
   --configuration-file TEXT       Path to configuration YAML file for NL
-                                  rendering of ontology terms  [required]
+                                  rendering of ontology terms
   --sqlite-file TEXT              Location of SQLite file used for persistence
                                   [required]
   --prefix TEXT                   Filter properties by URI prefix (only for

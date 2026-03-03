@@ -103,6 +103,7 @@ def match_object_sparql_expression(
             "load_owl",
             "destroy_sqlite",
             "find_classes",
+            "list_ontologies",
         ]
     ),
     required=True,
@@ -130,7 +131,6 @@ def match_object_sparql_expression(
     "--configuration-file",
     type=str,
     help="Path to configuration YAML file for NL rendering of ontology terms",
-    required=True,
 )
 @click.option(
     "--sqlite-file",
@@ -201,6 +201,8 @@ def main(
             print(f"{owl_class.iri} '{label}'")
 
     elif action == "render_class":
+        if not configuration_file:
+            raise ValueError("Configuration file is required for render_class action")
         onto = default_world.ontologies[ontology_uri]
         print("Loaded ontology")
         handler = CNLRenderer(
@@ -234,6 +236,10 @@ def main(
             summarize_owl_class(definition, handler, owl_class)
 
     elif action == "find_properties":
+        if not configuration_file:
+            raise ValueError(
+                "Configuration file is required for find_properties action"
+            )
         onto = default_world.ontologies[ontology_uri]
         print("Loaded ontology")
         handler = CNLRenderer(
@@ -335,14 +341,19 @@ def main(
             print("No ontology URL or path provided. Exiting.")
             return
         print(f"Loading Uberon ontology from {owl_url_or_path}, a IRI or local path.")
-        get_ontology(owl_url_or_path).load()
-        default_world.base_iri = ontology_uri
+        ontology = get_ontology(owl_url_or_path)
+        ontology.load()
+        ontology.set_base_iri(ontology_uri, rename_entities=False)
         default_world.save()
-        print(default_world.ontologies)
-        print(f"Saved {owl_url_or_path} to {ontology_uri}", default_world.ontologies)
+        print(f"Saved {owl_url_or_path} to {ontology_uri}")
     elif action == "destroy_sqlite":
         os.remove(sqlite_file)
         print(f"Deleted {sqlite_file}")
+    elif action == "list_ontologies":
+        for uri, ontology in default_world.ontologies.items():
+            print(
+                f"{uri}: ({ontology.name} with {len(list(ontology.get_triples())):,} triples)"
+            )
 
 
 def summarize_owl_class(

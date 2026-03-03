@@ -215,7 +215,6 @@ def get_owlready2_ontology(
         default_world.ontologies[ontology_uri] = ontology
         ontology.set_base_iri(ontology_uri, rename_entities=False)
         default_world.save()
-        print(default_world.ontologies)
     else:
         ontology = default_world.ontologies[ontology_uri]
     handler = CNLRenderer(
