@@ -12,6 +12,7 @@ but supports many aspects of other profiles as well.
 - [Loading Ontology](#loading-ontology)
 - [Rendering Classes](#rendering-classes)
 - [Listing Properties](#listing-properties)
+- [Rendering Horn Rules](#rendering-horn-rules)
 - [Reasoning](#reasoning)
 
 ## Introduction 
@@ -35,6 +36,27 @@ ontology in NL:
 - a definition annotation is provided for human-readable definitions of classes and properties (such as the `definition` annotation property from the Information Artifact Ontology (IAO) (`http://purl.obolibrary.org/obo/IAO_0000115`))
 
 These can be extended to allow for more expressive annotations about the object and data properties in the ontology.
+
+## OWL 2 Functional Syntax and Owlready2
+
+The table below maps common OWL 2 Functional Syntax components to their Owlready2 equivalents. These examples assume
+an `onto` ontology and typical Owlready2 imports.
+
+| OWL 2 Functional Syntax | Example | Owlready2 usage |
+| --- | --- | --- |
+| Declaration(Class(:A)) | `Declaration(Class(:A))` | `with onto: class A(Thing): pass` |
+| SubClassOf(:A :B) | `SubClassOf(:A :B)` | `class A(B): pass` or `A.is_a.append(B)` |
+| EquivalentClasses(:A ObjectIntersectionOf(:B :C)) | `EquivalentClasses(:A ObjectIntersectionOf(:B :C))` | `A.equivalent_to.append(B & C)` |
+| DisjointClasses(:A :B) | `DisjointClasses(:A :B)` | `A.disjoint_with.append(B)` or `AllDisjoint([A, B])` |
+| ObjectPropertyDomain(:p :A) | `ObjectPropertyDomain(:p :A)` | `p.domain = [A]` |
+| ObjectPropertyRange(:p :B) | `ObjectPropertyRange(:p :B)` | `p.range = [B]` |
+| ObjectSomeValuesFrom(:p :B) | `ObjectSomeValuesFrom(:p :B)` | `p.some(B)` |
+| ObjectAllValuesFrom(:p :B) | `ObjectAllValuesFrom(:p :B)` | `p.only(B)` |
+| ObjectHasValue(:p :a) | `ObjectHasValue(:p :a)` | `p.value(a)` |
+| ObjectMinCardinality(2 :p :B) | `ObjectMinCardinality(2 :p :B)` | `p.min(2, B)` |
+| ObjectExactCardinality(2 :p :B) | `ObjectExactCardinality(2 :p :B)` | `p.exactly(2, B)` |
+| ObjectIntersectionOf(:B :C) | `ObjectIntersectionOf(:B :C)` | `B & C` |
+| ObjectUnionOf(:B :C) | `ObjectUnionOf(:B :C)` | `B | C` |
 
 ```mermaid
 flowchart LR
@@ -283,6 +305,166 @@ $ owl_dsl.review --ontology-uri "http://purl.obolibrary.org/obo/uberon/uberon-ba
 	- The endothelial cell of respiratory system lymphatic vessel is defined in Uber-anatomy ontology as an endothelial cell that is part of a respiratory system lymphatic vessel. It is an endothelial cell of lymphatic vessel. It is part of a respiratory system lymphatic vessel endothelium
 [..snip..]                 
 ```
+## Rendering Horn Rules
+
+`RuleRenderer` extends `CNLRenderer` to render [FuXi](https://github.com/RDFLib/FuXi) Horn rules—parsed from
+[Notation 3](https://notation3.org/)—as CNL sentences, reusing the same `OWL_DSL_000001` property phrase
+templates that drive OWL class rendering.
+
+A Horn rule ``{ body } => { head }`` is rendered as:
+
+- `"Every <Class> <phrase>."` — when the body is a single `rdf:type` assertion (universal rule).
+- `"If <body phrases>, then <head phrase>."` — when the body is a conjunction of property triples.
+
+Property phrase templates are provided via the `OWL_DSL_000001` annotation property on each object property,
+exactly as for OWL class definitions.  After constructing a `RuleRenderer`, call
+`configure_cnl_from_annotations` to load the templates from the owlready2 world graph.
+
+### Example (minimal Owlready2 + rdflib graph)
+
+```python
+from io import StringIO
+from fuxi.Horn.HornRules import HornFromN3
+from fuxi.Horn.PositiveConditions import Uniterm
+from rdflib import RDF
+from owlready2 import World, Thing, ObjectProperty, AnnotationProperty
+from owl_dsl.rule_renderer import RuleRenderer
+from owl_dsl.annotations import configure_cnl_from_annotations
+
+BASE_URI = "http://example.org/"
+OWL_DSL_URI = "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
+
+N3_RULES = """
+@prefix : <http://example.org/>.
+{ ?slinger a :WebSlinger } => { ?slinger :locomotion :flying } .
+{ ?heli a :Helicopter } => { ?heli :locomotion :flying } .
+{ ?flyer :locomotion :flying . ?street :traffic :heavy }
+    => { ?street :suitable_observer ?flyer } .
+"""
+
+program = list(HornFromN3(StringIO(N3_RULES)))
+world = World()
+ontology = world.get_ontology(BASE_URI)
+owl_dsl_ns = ontology.get_namespace(OWL_DSL_URI)
+
+with ontology:
+    with owl_dsl_ns:
+        class OWL_DSL_000001(AnnotationProperty):
+            pass
+
+    # Classes used in rdf:type clauses should be labeled
+    class WebSlinger(Thing):
+        label = ["Web Slinger"]
+    class Helicopter(Thing):
+        label = ["Helicopter"]
+    class flying(Thing):
+        label = ["flying"]
+
+    # Property CNL phrases used in rule rendering
+    class locomotion(ObjectProperty):
+        label = ["locomotion"]
+        OWL_DSL_000001 = ["has {} as their means of locomotion"]
+    class traffic(ObjectProperty):
+        label = ["traffic"]
+        OWL_DSL_000001 = ["has {} traffic"]
+    class suitable_observer(ObjectProperty):
+        label = ["suitable_observer"]
+        OWL_DSL_000001 = ["has {} as a suitable observer"]
+
+    heavy = Thing("heavy", label=["heavy"])
+
+graph = world.as_rdflib_graph()
+renderer = RuleRenderer(ontology, BASE_URI, verbose=False, lowercase_labels=False)
+configure_cnl_from_annotations(renderer, graph)
+
+for rule in program:
+    # Skip pure subclass (rdf:type => rdf:type) rules
+    if not (isinstance(rule.formula.body, Uniterm) and
+            rule.formula.body.op == RDF.type and
+            isinstance(rule.formula.head, Uniterm) and
+            rule.formula.head.op == RDF.type):
+        print(renderer.render_rule(rule))
+```
+
+### Alternative (pure rdflib/InfixOwl)
+
+```python
+from io import StringIO
+from rdflib import Graph, Namespace, RDF
+from fuxi.Horn.HornRules import HornFromN3
+from fuxi.Horn.PositiveConditions import Uniterm
+from fuxi.Syntax.InfixOWL import Class, Property, AnnotationProperty, GraphContext
+from owl_dsl.rule_renderer import RuleRenderer
+from owl_dsl.annotations import configure_cnl_from_annotations
+
+BASE_URI = "http://example.org/"
+NS = Namespace(BASE_URI)
+OWL_DSL = Namespace("https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/")
+
+N3_RULES = """
+@prefix : <http://example.org/>.
+{ ?slinger a :WebSlinger } => { ?slinger :locomotion :flying } .
+{ ?heli a :Helicopter } => { ?heli :locomotion :flying } .
+{ ?flyer :locomotion :flying . ?street :traffic :heavy }
+    => { ?street :suitable_observer ?flyer } .
+"""
+
+program = list(HornFromN3(StringIO(N3_RULES)))
+graph = Graph()
+
+with GraphContext(graph, {"ex": NS}):
+    phrase = AnnotationProperty(OWL_DSL.OWL_DSL_000001)
+
+    Class(NS.WebSlinger).set_label("Web Slinger")
+    Class(NS.Helicopter).set_label("Helicopter")
+    Class(NS.flying).set_label("flying")
+
+    locomotion = Property(NS.locomotion).set_label("locomotion")
+    locomotion.set_annotation(phrase, "has {} as their means of locomotion")
+
+    traffic = Property(NS.traffic).set_label("traffic")
+    traffic.set_annotation(phrase, "has {} traffic")
+
+    suitable_observer = Property(NS.suitable_observer).set_label("suitable_observer")
+    suitable_observer.set_annotation(phrase, "has {} as a suitable observer")
+
+    Class(NS.heavy).set_label("heavy")
+
+renderer = RuleRenderer(None, BASE_URI, verbose=False, lowercase_labels=False)
+configure_cnl_from_annotations(renderer, graph)
+
+for rule in program:
+    if not (isinstance(rule.formula.body, Uniterm) and
+            rule.formula.body.op == RDF.type and
+            isinstance(rule.formula.head, Uniterm) and
+            rule.formula.head.op == RDF.type):
+        print(renderer.render_rule(rule))
+```
+
+Output:
+
+```
+Every Web Slinger has flying as their means of locomotion.
+Every Helicopter has flying as their means of locomotion.
+If ?flyer has flying as their means of locomotion and ?street has heavy traffic, then ?street has ?flyer as a suitable observer.
+```
+
+### Rule rendering summary
+
+| Body                              | Head             | Output form                                    |
+|-----------------------------------|------------------|------------------------------------------------|
+| `?x rdf:type :C`                  | property triple  | `Every <C-label> <phrase>.`                    |
+| conjunction of property triples   | property triple  | `If <conj phrases>, then <head phrase>.`       |
+
+Pure `rdf:type => rdf:type` rules (OWL subclass axioms) are typically skipped, as shown above,
+since they are already rendered by `CNLRenderer`'s OWL class rendering path.
+
+Notes:
+- Keep the `@prefix : <http://example.org/>` in the N3 rules consistent with the ontology base URI.
+- Property CNL phrases are taken from `OWL_DSL_000001` annotations on object properties.
+- If your rules use `rdf:type` clauses, ensure class labels are present.
+- `configure_cnl_from_annotations` must receive the rdflib graph that contains the annotations.
+
 ## Reasoning ##
 
 The `owl_dsl.reason` command-line tool can be used to for various reasoning tasks over an ontology leveraging
@@ -476,8 +658,15 @@ template used to render it:
     - 'What is caused by {}?'
 ```
 
+# Tests #
+
+Tests can be run via:
+
+```console
+uv run --active --extra nlp pytest --disable-warnings tests/[...]
+```
+
 # Citations #
 1. Fuchs, N. E., Kaljurand, K., & Kuhn, T. (2008). *Attempto controlled english for knowledge representation*. In Reasoning Web: 4th International Summer School 2008, Venice, Italy, September 7-11, 2008, Tutorial Lectures (pp. 104-124). Berlin, Heidelberg: Springer Berlin Heidelberg.
 2. Rosse, Cornelius, and José LV Mejino Jr. *A reference ontology for biomedical informatics: the Foundational Model of Anatomy.* Journal of biomedical informatics 36.6 (2003): 478-500.
 3. Ogbuji, Chimezie, and Rong Xu. *Lattices for representing and analyzing organogenesis.* Conference on Semantics in Healthcare and Life Sciences (CSHALS 2014), 2014. 
-
