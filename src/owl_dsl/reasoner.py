@@ -13,6 +13,7 @@ from owl_dsl.cli import (
     CLASS_AND_THEIR_DEFINITION_SPARQL,
     summarize_owl_class,
 )
+from owl_dsl.annotations import apply_annotations_to_handler, load_annotations_graph
 from owl_dsl.renderer import CNLRenderer
 from owl_dsl import base_uri, prefix_with_indefinite_article
 from owlready2 import (
@@ -37,6 +38,7 @@ from owlapy.owl_reasoner import SyncReasoner
 from owlapy.owl_property import OWLObjectProperty
 from owlapy.owl_ontology import Ontology, OWLClass
 from owlapy.owl_data_ranges import OWLPropertyRange
+from owlapy.iri import IRI
 
 EXPLANATION_FILE = os.environ.get("OWL_DSL_EXPLANATION_FILE", "/tmp/explanation.md")
 EXPLANATION_PATTERN = re.compile(
@@ -207,14 +209,29 @@ def get_owlready2_ontology(
     :rtype: tuple[CNLRenderer, Ontology]
     """
     if ontology_uri not in default_world.ontologies:
-        print(
-            f"Forcibly loading ontology from {owl_url_or_path} into {ontology_uri} (using {sqlite_file})"
-        )
-        ontology = get_ontology(owl_url_or_path)
-        ontology.load()
-        default_world.ontologies[ontology_uri] = ontology
-        ontology.set_base_iri(ontology_uri, rename_entities=False)
-        default_world.save()
+        # Try prefix match — the ontology may have been stored with a different
+        # trailing character (e.g. with # when queried without, or vice versa)
+        found = False
+        for stored_uri in default_world.ontologies:
+            if stored_uri.startswith(ontology_uri) or ontology_uri.startswith(
+                stored_uri
+            ):
+                ontology = default_world.ontologies[stored_uri]
+                found = True
+                break
+        if not found:
+            if owl_url_or_path is None:
+                raise ValueError(
+                    f"Ontology '{ontology_uri}' not found in SQLite and no owl_url_or_path provided"
+                )
+            print(
+                f"Forcibly loading ontology from {owl_url_or_path} into {ontology_uri} (using {sqlite_file})"
+            )
+            ontology = get_ontology(owl_url_or_path)
+            ontology.load()
+            default_world.ontologies[ontology_uri] = ontology
+            ontology.set_base_iri(ontology_uri, rename_entities=False)
+            default_world.save()
     else:
         ontology = default_world.ontologies[ontology_uri]
     handler = CNLRenderer(
@@ -226,12 +243,13 @@ def get_owlready2_ontology(
 def verbalize_gci_justifications(
     handler: CNLRenderer,
     owl_class: ThingClass,
-    owl_class_label: str,
+    owl_class_rdfs_label: str,
     ontology: Ontology,
     ontology_namespace_baseuri: str,
     owl_url_or_path: str,
     owl_super_class_expression,
     verbose: bool,
+    display_label: str | None = None,
 ):
     """
     Verbalizes justifications for a General Concept Inclusion (GCI) axiom in an ontology.
@@ -243,7 +261,8 @@ def verbalize_gci_justifications(
         properties from an ontology into controlled natural language.
     :param owl_class: Instance of `ThingClass` representing the OWL class for which justifications
         are generated.
-    :param owl_class_label: Human-readable label or name for the OWL class.
+    :param owl_class_rdfs_label: The class's `rdfs:label`. Used in the Manchester axiom passed to
+        `robot explain`, which resolves classes against the OWL file's rdfs:label values.
     :param ontology: Ontology object providing the structure and axioms from which justifications
         are derived.
     :param ontology_namespace_baseuri: String defining the base URI of the ontology namespace, utilized
@@ -253,15 +272,18 @@ def verbalize_gci_justifications(
         GCI axiom.
     :param verbose: Boolean flag indicating if detailed additional information, such as matching explanations
         and verbose commands, should be printed.
+    :param display_label: Optional human-friendly label (typically `skos:prefLabel`) used in the
+        "How is every '...'" console output. Falls back to `owl_class_rdfs_label` when omitted.
 
     :return: None. Outputs verbalized justifications or related ontology reasoning to the console.
     """
-    axiom_to_prove = f"'{owl_class_label}' SubClassOf {owl_super_class_expression}"
+    axiom_to_prove = f"'{owl_class_rdfs_label}' SubClassOf {owl_super_class_expression}"
     extra_info = f" ({axiom_to_prove})" if verbose else ""
     prefixed_owl_superclass = prefix_with_indefinite_article(owl_super_class_expression)
+    printed_label = display_label if display_label else owl_class_rdfs_label
     print(
         f"How is "
-        f"every '{owl_class_label}' ({owl_class.name}) {prefixed_owl_superclass}{extra_info}?\n"
+        f"every '{printed_label}' ({owl_class.name}) {prefixed_owl_superclass}{extra_info}?\n"
     )
     commands = [
         "robot",
@@ -494,13 +516,24 @@ def main(
             ontology_uri, owl_url_or_path, sqlite_file, verbose, exact_class_labels
         )
         reasoner = SyncReasoner(ontology=owl_url_or_path, reasoner="ELK")
-        definition_properties = setup_configuration(handler, configuration_file)
-        class_expression = (
-            f"?owl_class rdfs:label ?label "
-            f"FILTER(?owl_class = <{getattr(handler.ontology_lookup, class_reference).iri}>)"
-            if by_id
-            else f"?owl_class rdfs:label '{class_reference}'"
+        definition_properties = setup_configuration(
+            handler, configuration_file, verbose
         )
+        annotation_graph = load_annotations_graph(ontology, owl_url_or_path)
+        if annotation_graph is not None:
+            (
+                annotation_definition_properties,
+                annotation_definitions_present,
+            ) = apply_annotations_to_handler(handler, annotation_graph)
+            if annotation_definitions_present or not definition_properties:
+                definition_properties = annotation_definition_properties
+        if by_id:
+            class_iri = ontology_namespace_baseuri + class_reference
+            class_expression = (
+                f"?owl_class rdfs:label ?label " f"FILTER(?owl_class = <{class_iri}>)"
+            )
+        else:
+            class_expression = f"?owl_class rdfs:label '{class_reference}'"
         prop_conjunction = (
             " || ".join([f"?defprop = <{p}>" for p in definition_properties])
             if len(definition_properties) > 1
@@ -510,13 +543,18 @@ def main(
                 else ""
             )
         )
-        def_prop_expression = f"FILTER({prop_conjunction})"
+        def_prop_expression = f"FILTER({prop_conjunction})" if prop_conjunction else ""
         query = CLASS_AND_THEIR_DEFINITION_SPARQL.format(
             owl_class_expression=class_expression,
             def_prop_expression=def_prop_expression,
         )
         for owl_class, definition in default_world.sparql_query(query):
-            owl_class_label = owl_class.label[0]
+            owl_class_rdfs_label = owl_class.label[0]
+            owl_class_label = (
+                owl_class.prefLabel[0]
+                if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel
+                else owl_class_rdfs_label
+            )
             summarize_owl_class(definition, handler, owl_class)
             print("------" * 10)
             stated_ancestry_iris = [
@@ -532,26 +570,39 @@ def main(
                 if isinstance(item, ThingClass)
             ]
 
-            owl2apy_class = OWLClass(owl_class.iri)
+            owl2apy_iri = IRI.create(
+                owl_class.iri, is_file_path="/" not in str(owl_class.iri)
+            )
+            owl2apy_class = OWLClass(owl2apy_iri)
             for super_owl_class in reasoner.super_classes(owl2apy_class):
                 try:
                     super_owl_class_iri = str(super_owl_class.iri.str)
                     if super_owl_class_iri in stated_ancestry_iris + [str(OWL.Thing)]:
                         continue
                     super_owl_class = get_owlready2_class(ontology, super_owl_class_iri)
-                    super_class_label = super_owl_class.label[0]
-                    quoted_super_owl_class_label = f"'{super_class_label}'"
-                    if str(super_class_label) not in handler.class_inference_to_ignore:
+                    super_class_rdfs_label = super_owl_class.label[0]
+                    super_class_display_label = (
+                        super_owl_class.prefLabel[0]
+                        if getattr(super_owl_class, "prefLabel", None)
+                        and super_owl_class.prefLabel
+                        else super_class_rdfs_label
+                    )
+                    quoted_super_owl_class_label = f"'{super_class_rdfs_label}'"
+                    if (
+                        str(super_class_display_label)
+                        not in handler.class_inference_to_ignore
+                    ):
                         try:
                             verbalize_gci_justifications(
                                 handler,
                                 owl_class,
-                                owl_class_label,
+                                owl_class_rdfs_label,
                                 ontology,
                                 ontology_namespace_baseuri,
                                 owl_url_or_path,
                                 quoted_super_owl_class_label,
                                 verbose,
+                                display_label=owl_class_label,
                             )
                         except NotImplementedError as e:
                             warnings.warn(
@@ -564,19 +615,27 @@ def main(
             for owl_sub_class in reasoner.sub_classes(owl2apy_class):
                 if owl_sub_class.iri.str not in stated_subclass_iris:
                     try:
-                        owl_super_class_label = f"'{owl_class_label}'"
+                        owl_super_class_label = f"'{owl_class_rdfs_label}'"
                         owlr2_sub_class = get_owlready2_class(
                             ontology, owl_sub_class.iri.str
+                        )
+                        owl_sub_class_rdfs_label = owlr2_sub_class.label[0]
+                        owl_sub_class_label = (
+                            owlr2_sub_class.prefLabel[0]
+                            if getattr(owlr2_sub_class, "prefLabel", None)
+                            and owlr2_sub_class.prefLabel
+                            else owl_sub_class_rdfs_label
                         )
                         verbalize_gci_justifications(
                             handler,
                             owlr2_sub_class,
-                            owlr2_sub_class.label[0],
+                            owl_sub_class_rdfs_label,
                             ontology,
                             ontology_namespace_baseuri,
                             owl_url_or_path,
                             owl_super_class_label,
                             verbose,
+                            display_label=owl_sub_class_label,
                         )
                     except (NotImplementedError, IndexError) as e:
                         warnings.warn(
@@ -587,13 +646,24 @@ def main(
         handler, ontology = get_owlready2_ontology(
             ontology_uri, owl_url_or_path, sqlite_file
         )
-        definition_properties = setup_configuration(handler, configuration_file)
-        class_expression = (
-            f"?owl_class rdfs:label ?label "
-            f"FILTER(?owl_class = <{getattr(handler.ontology_lookup, class_reference).iri}>)"
-            if by_id
-            else f"?owl_class rdfs:label '{class_reference}'"
+        definition_properties = setup_configuration(
+            handler, configuration_file, verbose
         )
+        annotation_graph = load_annotations_graph(ontology, owl_url_or_path)
+        if annotation_graph is not None:
+            (
+                annotation_definition_properties,
+                annotation_definitions_present,
+            ) = apply_annotations_to_handler(handler, annotation_graph)
+            if annotation_definitions_present or not definition_properties:
+                definition_properties = annotation_definition_properties
+        if by_id:
+            class_iri = ontology_namespace_baseuri + class_reference
+            class_expression = (
+                f"?owl_class rdfs:label ?label " f"FILTER(?owl_class = <{class_iri}>)"
+            )
+        else:
+            class_expression = f"?owl_class rdfs:label '{class_reference}'"
         prop_conjunction = (
             " || ".join([f"?defprop = <{p}>" for p in definition_properties])
             if len(definition_properties) > 1
@@ -603,7 +673,7 @@ def main(
                 else ""
             )
         )
-        def_prop_expression = f"FILTER({prop_conjunction})"
+        def_prop_expression = f"FILTER({prop_conjunction})" if prop_conjunction else ""
         query = CLASS_AND_THEIR_DEFINITION_SPARQL.format(
             owl_class_expression=class_expression,
             def_prop_expression=def_prop_expression,
@@ -611,18 +681,24 @@ def main(
         if verbose:
             print(query)
         for owl_class, definition in default_world.sparql_query(query):
-            owl_class_label = owl_class.label[0]
+            owl_class_rdfs_label = owl_class.label[0]
+            owl_class_label = (
+                owl_class.prefLabel[0]
+                if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel
+                else owl_class_rdfs_label
+            )
             summarize_owl_class(definition, handler, owl_class)
             print("------" * 10)
             verbalize_gci_justifications(
                 handler,
                 owl_class,
-                owl_class_label,
+                owl_class_rdfs_label,
                 ontology,
                 ontology_namespace_baseuri,
                 owl_url_or_path,
                 manchester_owl_expression,
                 verbose,
+                display_label=owl_class_label,
             )
 
 
