@@ -1,6 +1,7 @@
 import warnings
+import os
 from itertools import groupby
-from typing import Union, List, Iterable
+from typing import Union, List, Iterable, Any, Tuple, Optional
 
 from owlready2 import (
     Ontology,
@@ -26,6 +27,7 @@ from owlready2 import (
     DataPropertyClass,
     HAS_SELF,
     ObjectPropertyClass,
+    Thing,
 )
 from rdflib import Namespace, URIRef
 
@@ -59,15 +61,23 @@ class CNLRenderer:
 
     def __init__(
         self,
-        ontology: Ontology,
+        ontology: Ontology | None,
         ontology_namespace: str,
         verbose: bool = False,
         custom_role_rendering: bool = True,
         lowercase_labels: bool = True,
+        collect_definition_info: bool | None = None,
     ):
         self.ontology = ontology
         self.definition_info = {}
-        self.property_iris = [p.iri for p in sorted(self.ontology.properties())]
+        if self.ontology is not None:
+            self.property_iris = self._get_all_property_iris()
+            self.property_iri_index = {
+                prop_iri: index for index, prop_iri in enumerate(self.property_iris)
+            }
+        else:
+            self.property_iris = []
+            self.property_iri_index = {}
         self.verbose = verbose
         self.ontology_namespace = Namespace(ontology_namespace)
         self.ontology_lookup = get_namespace(self.ontology_namespace)
@@ -80,11 +90,67 @@ class CNLRenderer:
         self.class_inference_to_ignore = []
         self.ontology_title = None
         self.lowercase_labels = lowercase_labels
+        if collect_definition_info is None:
+            collect_definition_info = (
+                os.environ.get("OWL_DSL_COLLECT_DEFINITION_INFO", "1") != "0"
+            )
+        self.collect_definition_info = collect_definition_info
+        self._entity_by_iri = {}
         for (title,) in default_world.sparql_query(
             f"SELECT ?ontology_title "
             f"{{ ?ontology a owl:Ontology; dc:title ?ontology_title }}"
         ):
             self.ontology_title = title
+
+    def _get_all_property_iris(self) -> List[str]:
+        """Return IRIs of all properties in the ontology.
+
+        owlready2's ``.properties()`` misses properties declared with OWL
+        property sub-types (e.g. ``owl:SymmetricProperty``) when they lack an
+        explicit ``rdf:type owl:ObjectProperty``.  This method uses a direct
+        SQLite query when available to find every resource typed as any OWL
+        property subclass, falling back to the standard API.
+        """
+        graph = getattr(default_world, "graph", None)
+        if graph is not None:
+            rdf_type_s = graph.execute(
+                "SELECT storid FROM resources WHERE iri=?",
+                ("http://www.w3.org/1999/02/22-rdf-syntax-ns#type",),
+            ).fetchone()
+            if rdf_type_s is not None:
+                rdf_type_s = rdf_type_s[0]
+                prop_type_iris = [
+                    "http://www.w3.org/2002/07/owl#ObjectProperty",
+                    "http://www.w3.org/2002/07/owl#DatatypeProperty",
+                    "http://www.w3.org/2002/07/owl#AnnotationProperty",
+                    "http://www.w3.org/2002/07/owl#SymmetricProperty",
+                    "http://www.w3.org/2002/07/owl#FunctionalProperty",
+                    "http://www.w3.org/2002/07/owl#TransitiveProperty",
+                    "http://www.w3.org/2002/07/owl#ReflexiveProperty",
+                    "http://www.w3.org/2002/07/owl#IrreflexiveProperty",
+                    "http://www.w3.org/2002/07/owl#AsymmetricProperty",
+                    "http://www.w3.org/2002/07/owl#InverseFunctionalProperty",
+                ]
+                prop_type_storids = []
+                for pt in prop_type_iris:
+                    row = graph.execute(
+                        "SELECT storid FROM resources WHERE iri=?", (pt,)
+                    ).fetchone()
+                    if row:
+                        prop_type_storids.append(row[0])
+                if prop_type_storids:
+                    placeholders = ",".join("?" for _ in prop_type_storids)
+                    rows = graph.execute(
+                        f"""
+                        SELECT DISTINCT r.iri FROM resources r
+                        JOIN objs t ON r.storid = t.s
+                        WHERE t.p = ? AND t.o IN ({placeholders})
+                    """,
+                        [rdf_type_s] + prop_type_storids,
+                    )
+                    return sorted(row[0] for row in rows)
+        # Fallback
+        return sorted(p.iri for p in self.ontology.properties())
 
     def is_logical_construct_key(self, key: int) -> bool:
         """
@@ -116,9 +182,10 @@ class CNLRenderer:
             return self.LOGICAL_CONSTRUCT_KEY
         elif isinstance(concept, Restriction):
             # Distinguish restrictions by their owl:onProperty value
-            return self.RESTRICTION_START_KEY + self.property_iris.index(
-                concept.property.iri
-            )
+            prop_index = self.property_iri_index.get(concept.property.iri)
+            if prop_index is None:
+                raise ValueError(f"Property IRI not found: {concept.property.iri}")
+            return self.RESTRICTION_START_KEY + prop_index
         elif isinstance(concept, ThingClass):
             return self.RESTRICTION_START_KEY + len(self.property_iris)
         elif isinstance(concept, Not):
@@ -176,17 +243,40 @@ class CNLRenderer:
             elif len(owl_class_names) == 1:
                 return owl_class_names[0]
             elif len(owl_class_names) == 2:
-                return f"{owl_class_names[0]} that {owl_class_names[1]}"
+                if isinstance(owl_class, Or):
+                    return f"{owl_class_names[0]} or {owl_class_names[1]}"
+                if isinstance(owl_class, And):
+                    return f"{owl_class_names[0]} that {owl_class_names[1]}"
             else:
                 # First and second joined with ' that ', rest joined with ' and '
                 result = f"{owl_class_names[0]} that {owl_class_names[1]}"
                 return (
                     result
-                    + f" and {pretty_print_list(owl_class_names[2:], and_char = ', and ')}"
+                    + f" and {pretty_print_list(owl_class_names[2:], and_char=', and ')}"
                 )
         else:
-            if owl_class.label:
+            if isinstance(owl_class, (str, int, float, bool)):
+                if isinstance(owl_class, str):
+                    return f'"{owl_class}"'
+                return str(owl_class)
+            if isinstance(owl_class, Restriction):
+                prop_custom_phrases = self.relevant_role_restriction_cnl_phrasing.get(
+                    URIRef(owl_class.property.iri)
+                )
+                return self.render_restrictions(
+                    anonymous=True,
+                    custom_phrases=prop_custom_phrases,
+                    owl_class=owl_class,
+                    label_based_template="{prefix}{prop_label} {value_name}",
+                    indefinate_article=False,
+                )
+            if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel:
+                owl_class_label = owl_class.prefLabel[0]
+            elif owl_class.label:
                 owl_class_label = owl_class.label[0]
+            else:
+                owl_class_label = None
+            if owl_class_label is not None:
                 if no_indef_article:
                     name = f"{owl_class_label}"
                 else:
@@ -195,7 +285,7 @@ class CNLRenderer:
                     ).capitalize()
                     name = prefixed_name
             else:
-                name = "" if no_indef_article else f"the {str(owl_class.label[0])}"
+                name = "" if no_indef_article else "the unknown"
             if name.strip():
                 name = (
                     name
@@ -243,7 +333,7 @@ class CNLRenderer:
                 else:
                     s.append(self.render_owl_class(x))
             if isinstance(owl_class, Or):
-                return pretty_print_list(s, and_char=", or ")
+                return pretty_print_list(s, and_char=", or ", binary_op="or")
             if isinstance(owl_class, And):
                 return pretty_print_list(s, and_char=", and ")
         if isinstance(owl_class, Not):
@@ -259,39 +349,31 @@ class CNLRenderer:
                 URIRef(prop_iri)
             )
             if owl_class.type == base.SOME:
-                restriction_value = self.render_readable_owl_class(owl_class.value)
-                value_name = prefix_with_indefinite_article(restriction_value)
-                if custom_phrases and self.custom_role_rendering:
-                    return custom_phrases[0].format(value_name)
-                elif len(owl_class.property.label):
-                    prop_label = str(owl_class.property.label[0])
-                    prefix = "" if anonymous else "is "
-                    rt = f"{prefix}{prop_label} {value_name}"
-                    return rt
-                else:
-                    return "something"
-            if owl_class.type == base.ONLY:
-                raise NotImplementedError
-            if owl_class.type == base.VALUE:
-                return "%s .{%s}" % (
-                    self.render_owl_class(owl_class.property),
-                    (
-                        owl_class.value.name
-                        if isinstance(owl_class.value, owl.Thing)
-                        else owl_class.value
-                    ),
+                return self.render_restrictions(anonymous, custom_phrases, owl_class)
+            elif owl_class.type == base.ONLY:
+                return self.render_restrictions(
+                    anonymous,
+                    custom_phrases,
+                    owl_class,
+                    label_based_template="{prefix}{prop_label} only {value_name}",
                 )
-            if owl_class.type == base.HAS_SELF:
-                raise NotImplementedError
-            if owl_class.type == base.EXACTLY:
-                prop_label = str(owl_class.property.label[0])
-                prefix = "" if anonymous else "is "
-                return (
-                    f"{prefix}{prop_label} exactly {owl_class.cardinality} "
-                    f"{self.render_readable_owl_class(owl_class.value)}"
+            elif owl_class.type == base.VALUE:
+                return self.render_restrictions(
+                    anonymous,
+                    custom_phrases,
+                    owl_class,
+                    label_based_template="{prefix}{prop_label} {value_name}",
+                    indefinate_article=False,
                 )
+            elif owl_class.type == base.HAS_SELF:
+                raise NotImplementedError
+            elif owl_class.type == base.EXACTLY:
+                return self.render_cardinality_restrictions(anonymous, owl_class)
 
-            if owl_class.type == base.MIN:
+            elif owl_class.type == base.MIN:
+                return self.render_cardinality_restrictions(
+                    anonymous, owl_class, phrase=" at least "
+                )
                 prop_label = str(owl_class.property.label[0])
                 prefix = "" if anonymous else "is "
                 return (
@@ -299,18 +381,77 @@ class CNLRenderer:
                     f"{self.render_readable_owl_class(owl_class.value)}"
                 )
             if owl_class.type == base.MAX:
-                raise NotImplementedError
+                return self.render_cardinality_restrictions(
+                    anonymous, owl_class, phrase=" no more than "
+                )
+                # raise NotImplementedError
         if isinstance(owl_class, OneOf):
             raise NotImplementedError
         if isinstance(owl_class, ConstrainedDatatype):
             raise NotImplementedError
         if isinstance(owl_class, PropertyChain):
             raise NotImplementedError
-        if rdfs_datatype in [
+        if hasattr(owl_class, "is_a") and rdfs_datatype in [
             some_owl_class.storid for some_owl_class in owl_class.is_a
         ]:  # rdfs:Datatype
             return owl_class.name
-        raise NotImplementedError
+        if isinstance(owl_class, (str, int, float, bool)):
+            if isinstance(owl_class, str):
+                return f'"{owl_class}"'
+            return str(owl_class)
+        if isinstance(owl_class, type):
+            return {int: "integer", str: "string", float: "float", bool: "boolean"}.get(
+                owl_class, owl_class.__name__
+            )
+        if isinstance(owl_class, Thing):
+            return owl_class.label[0] if owl_class.label else "something"
+        raise NotImplementedError(owl_class)
+
+    def render_cardinality_restrictions(
+        self, anonymous: bool, owl_class: Restriction, phrase: str = " exactly "
+    ) -> str:
+        prop_label = str(owl_class.property.label[0])
+        prefix = "" if anonymous else "is "
+        return (
+            f"{prefix}{prop_label}{phrase}{owl_class.cardinality} "
+            f"{self.render_readable_owl_class(owl_class.value)}"
+        )
+
+    def render_restrictions(
+        self,
+        anonymous: bool,
+        custom_phrases: Optional[Tuple[str, str, str]],
+        owl_class: Restriction,
+        label_based_template: str = "{prefix}{prop_label} {value_name}",
+        indefinate_article: bool = True,
+    ) -> str:
+        restriction_value = self.render_readable_owl_class(owl_class.value)
+        value_name = (
+            prefix_with_indefinite_article(restriction_value)
+            if indefinate_article
+            else restriction_value
+        )
+        if custom_phrases and self.custom_role_rendering:
+            return custom_phrases[0].format(value_name)
+        elif len(owl_class.property.label):
+            prop_label = str(owl_class.property.label[0])
+            prefix = "" if anonymous else "is "
+            return label_based_template.format(
+                prefix=prefix, prop_label=prop_label, value_name=value_name
+            )
+        else:
+            return "something"
+
+    def _get_entity_by_iri(self, iri: str):
+        cached = self._entity_by_iri.get(iri)
+        if cached is not None:
+            return cached
+        result = self.ontology.search(iri=iri)
+        if not result:
+            raise IndexError(f"No entity found for IRI: {iri}")
+        entity = result[0]
+        self._entity_by_iri[iri] = entity
+        return entity
 
     def extract_conjunction_phrases(
         self, owl_class: ClassConstruct, definitional_phrases: List[str], name: str
@@ -390,7 +531,11 @@ class CNLRenderer:
             OWL class being processed.
         :return: None.
         """
-        owl_class_def_info = self.definition_info.setdefault(owl_class_id, {})
+        owl_class_def_info = (
+            self.definition_info.setdefault(owl_class_id, {})
+            if self.collect_definition_info
+            else None
+        )
         for key, group in groupby(
             sorted(owl_classes, key=self.concept_group_key, reverse=True),
             key=self.concept_group_key,
@@ -444,9 +589,10 @@ class CNLRenderer:
                                 continue
                             else:
                                 definitional_phrase = f"{name_or_pronoun} {phrase}"
-                                owl_class_def_info[
-                                    prompt.format(owl_class_name_phrase)
-                                ] = definitional_phrase
+                                if owl_class_def_info is not None:
+                                    owl_class_def_info[
+                                        prompt.format(owl_class_name_phrase)
+                                    ] = definitional_phrase
                                 definitional_phrases.append(definitional_phrase)
                     elif cnl_phrase:
                         singular_phrase, plural_phrase, prompt = cnl_phrase
@@ -470,12 +616,13 @@ class CNLRenderer:
                             plural_phrase if len(values) > 1 else singular_phrase
                         ).format(values_list)
                         definitional_phrase = f"{name_or_pronoun} {phrase}"
-                        owl_class_def_info[prompt.format(owl_class_name_phrase)] = (
-                            definitional_phrase
-                        )
+                        if owl_class_def_info and prompt is not None:
+                            owl_class_def_info[prompt.format(owl_class_name_phrase)] = (
+                                definitional_phrase
+                            )
                         definitional_phrases.append(definitional_phrase)
                     else:
-                        prop = self.ontology.search(iri=prop_iri)[0]
+                        prop = self._get_entity_by_iri(prop_iri)
                         if not isinstance(prop, DataPropertyClass) and prop.label:
                             # print(f"#### {prop.iri} ###")
                             name_or_pronoun = self.handle_first_definitional_phrase(
@@ -499,6 +646,21 @@ class CNLRenderer:
                                         )
                                     else:
                                         values.append(f"{prop_label} itself")
+                                elif (
+                                    isinstance(owl_class.value, ThingClass)
+                                    and owl_class.type == base.MIN
+                                ):
+                                    pass
+                                elif (
+                                    isinstance(owl_class.value, ThingClass)
+                                    and owl_class.type == base.MAX
+                                ):
+                                    pass
+                                elif (
+                                    isinstance(owl_class.value, ThingClass)
+                                    and owl_class.type == base.EXACTLY
+                                ):
+                                    pass
                                 else:
                                     values.append(
                                         prefix_with_indefinite_article(
@@ -510,9 +672,10 @@ class CNLRenderer:
                             values_phrase = pretty_print_list(values, and_char=", and ")
                             phrase = f"{prop_label} {values_phrase}"
                             definitional_phrase = f"{name_or_pronoun} {phrase}"
-                            owl_class_def_info[
-                                f"What is {owl_class_name_phrase} {prop_label}?"
-                            ] = definitional_phrase
+                            if owl_class_def_info is not None:
+                                owl_class_def_info[
+                                    f"What is {owl_class_name_phrase} {prop_label}?"
+                                ] = definitional_phrase
                             definitional_phrases.append(definitional_phrase)
                         else:
                             warnings.warn(f"Unsupported property type: {prop}")
@@ -546,7 +709,12 @@ class CNLRenderer:
         :rtype: str
         """
         owl_class_id = owl_class.iri.split(self.ontology_namespace)[-1]
-        owl_class_name_phrase = f"the {str(owl_class.label[0])}"
+        owl_class_best_label = (
+            owl_class.prefLabel[0]
+            if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel
+            else owl_class.label[0]
+        )
+        owl_class_name_phrase = f"the {str(owl_class_best_label)}"
         owl_class_definition = self.render_readable_owl_class(
             owl_class, capitalize_first_letter=True
         ).strip()

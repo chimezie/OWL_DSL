@@ -3,6 +3,7 @@
 __version__ = "0.2.2"
 
 import warnings
+from functools import lru_cache
 from typing import Union
 import types
 import owlready2
@@ -24,12 +25,20 @@ from owlready2 import (
     IndividualValueList,
 )
 
-try:
-    import spacy
+nlp = None
+_nlp_loaded = False
 
-    nlp = spacy.load("en_core_web_sm")
-except (OSError, ImportError):
-    nlp = None
+
+# https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
+def _get_nlp():
+    try:
+        import spacy
+
+        return spacy.load("en_core_web_sm")
+    except (OSError, ImportError):
+        nlp = None
+    return nlp
+
 
 VOWELS = "aeiou"
 
@@ -189,16 +198,20 @@ def _indefinite_article(word: str) -> str:
     return "an" if word and word[0].lower() in VOWELS else "a"
 
 
+@lru_cache(maxsize=2048)
 def prefix_with_indefinite_article(term: str | None, unquoted: bool = True) -> str:
     if term is None:
         return "something"
     else:
         _term = term if unquoted else f"'{term}'"
-        if not nlp is None:
-            for idx, token in enumerate(nlp(term)):
+        nlp_instance = _get_nlp()
+        if not nlp_instance is None:
+            doc = nlp_instance(term)
+            last_idx = len(doc) - 1
+            for idx, token in enumerate(doc):
                 if token.tag_ == "VBG":
                     return _term
-                elif token.tag_ == "NN" and idx == len(nlp(term)) - 1:
+                elif token.tag_ == "NN" and idx == last_idx:
                     return f"{_indefinite_article(term)} " + _term
         else:
             # warnings.warn("nlp not initialized")
