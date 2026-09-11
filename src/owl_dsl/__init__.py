@@ -1,6 +1,6 @@
-"""OWL_DSL - Library for extracting Domain Specific Languages from OWL (using Owlready2)"""
+"""OWL_DSL - Library for extracting Domain Specific Languages from OWL ontologies."""
 
-__version__ = "0.2.2"
+__version__ = "0.4.2"
 
 import warnings
 from functools import lru_cache
@@ -31,6 +31,7 @@ _nlp_loaded = False
 
 # https://github.com/explosion/spaCy/blob/master/spacy/glossary.py
 def _get_nlp():
+    """Load the spaCy English model, returning None if unavailable."""
     try:
         import spacy
 
@@ -120,6 +121,7 @@ def _render_restriction(concept: Restriction) -> str:
 
 
 def dl_render_concept_str(concept: Union[Construct, EntityClass]) -> str:
+    """Render an OWL concept as a Description Logic (DL) syntax string."""
     if concept is None:
         return _DL_SYNTAX.BOTTOM
     if isinstance(concept, ThingClass):
@@ -183,6 +185,7 @@ def dl_render_concept_str(concept: Union[Construct, EntityClass]) -> str:
 
 
 def pretty_print_list(my_list, sep=", ", and_char=", & ", binary_op="and"):
+    """Format a list as a human-readable string with separators and a conjunction."""
     return (
         and_char.join([sep.join(my_list[:-1]), my_list[-1]])
         if len(my_list) > 2
@@ -195,11 +198,13 @@ def pretty_print_list(my_list, sep=", ", and_char=", & ", binary_op="and"):
 
 
 def _indefinite_article(word: str) -> str:
+    """Return 'an' or 'a' based on whether the word starts with a vowel sound."""
     return "an" if word and word[0].lower() in VOWELS else "a"
 
 
 @lru_cache(maxsize=2048)
 def prefix_with_indefinite_article(term: str | None, unquoted: bool = True) -> str:
+    """Prefix a term with the appropriate indefinite article based on its part of speech."""
     if term is None:
         return "something"
     else:
@@ -220,5 +225,6 @@ def prefix_with_indefinite_article(term: str | None, unquoted: bool = True) -> s
 
 
 def get_owl_class_label(owl_class: ThingClass) -> str | None:
+    """Return the first string label for an OWL class, or None."""
     labels: IndividualValueList = owl_class.label
     return next((item for item in labels if isinstance(item, str)), None)
