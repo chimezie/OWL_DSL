@@ -8,6 +8,8 @@ version = "1.0.1"
 description = "Library for extracting Domain Specific Languages from OWL Ontologies (using py-horned-owl)"
 readme = "README.md"
 requires-python = ">=3.13"
+license = "MIT"
+keywords = ["owl", "ontology", "controlled-natural-language", "biomedical", "reasoning"]
 dependencies = [
     "click>=8.3.1",
     "fuxi>=2.0.1",
@@ -19,6 +21,11 @@ dependencies = [
     "owlapy>=1.6.4",
 ]
 
+[project.urls]
+Homepage = "https://github.com/chimezie/OWL_DSL"
+Repository = "https://github.com/chimezie/OWL_DSL"
+Issues = "https://github.com/chimezie/OWL_DSL/issues"
+
 [tool.poetry.dependencies]
 my-package = { fuxi = "/home/chimezie/Projects/FuXi-reincarnate/FuXi-reincarnate-chimezie", develop = true }
 
@@ -27,6 +34,7 @@ authors = [
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: PyPy",
