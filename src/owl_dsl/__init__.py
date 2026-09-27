@@ -1,6 +1,6 @@
 """OWL_DSL - Library for extracting Domain Specific Languages from OWL ontologies."""
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import warnings
 from functools import lru_cache

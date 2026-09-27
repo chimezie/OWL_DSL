@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1] - 2026-09-27
+
+### Fixed
+- Pin minimum FuXi version to `fuxi>=2.0.1` for Horn rule rendering
+  (`owl_dsl.render_rules`, `RuleRenderer`), which relies on the latest
+  FuXi release's DLP and N3 rule APIs.
+
 ## [1.0.0] - 2026-09-26
 
 ### Changed

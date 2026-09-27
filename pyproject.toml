@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "OWL_DSL"
-version = "1.0.0"
+version = "1.0.1"
 description = "Library for extracting Domain Specific Languages from OWL Ontologies (using py-horned-owl)"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "click>=8.3.1",
-    "fuxi",
+    "fuxi>=2.0.1",
     "owlready2>=0.50",
     "py-horned-owl>=2.0.0",
     "pyyaml>=6.0.3",
