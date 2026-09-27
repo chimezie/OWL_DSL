@@ -184,7 +184,8 @@ def render_to_man_owl(graph):
 @click.option(
     "--configuration-file",
     type=str,
-    help="Path to configuration YAML file for NL rendering of ontology terms",
+    help="Path to configuration YAML file for NL rendering of ontology terms. "
+    "When omitted, ontology-embedded OWL_DSL_* annotations are used.",
 )
 @click.option(
     "--sqlite-file",
@@ -413,9 +414,7 @@ def main(
         for p, ns in sorted(prefixes.items()):
             print(f"  Prefix '{p}': {ns}")
     elif action == "lint_ontology":
-        OWL_DSL = Namespace(
-            "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
-        )
+        OWL_DSL = Namespace("http://purl.org/ontology-dsl#")
         onto = pyhornedowl.open_ontology(owl_url_or_path)
         handler = CNLRenderer(
             onto,

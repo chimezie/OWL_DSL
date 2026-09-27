@@ -27,7 +27,7 @@ from owl_dsl.annotations import configure_cnl_from_annotations
 DIR = Path(__file__).parent
 BASE_URI = "https://github.com/chimezie/owl_dsl/Terms#"
 RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
-OWL_DSL_NS = "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
+OWL_DSL_NS = "http://purl.org/ontology-dsl#"
 OWL_DSL = Namespace(OWL_DSL_NS)
 
 EXPECTED_TEXT1 = (

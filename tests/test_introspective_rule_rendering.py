@@ -17,9 +17,7 @@ from fuxi.Horn.HornRules import horn_from_n3
 
 DIR = Path(__file__).parent
 BASE_URI = "http://example.org/"
-OWL_DSL = Namespace(
-    "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
-)
+OWL_DSL = Namespace("http://purl.org/ontology-dsl#")
 
 # https://notation3.org/#chaining_example
 N3_RULES = """

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <rdf:RDF xmlns="http://purl.org/sig/ont/fma.owl#"
-     xml:base="https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
+     xml:base="http://purl.org/ontology-dsl#"
      xmlns:dc="http://purl.org/dc/elements/1.1/"
      xmlns:fma="http://purl.org/sig/ont/fma/"
      xmlns:owl="http://www.w3.org/2002/07/owl#"

@@ -16,11 +16,9 @@ from rdflib import BNode, Graph, Literal, RDF, URIRef, Namespace, RDFS
 from rdflib.namespace import OWL, Namespace
 from rdflib.term import Identifier
 
-BASE_IRI = "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
+BASE_IRI = "http://purl.org/ontology-dsl#"
 OBO = Namespace("http://purl.obolibrary.org/obo/")
-OWL_DSL = Namespace(
-    "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
-)
+OWL_DSL = Namespace("http://purl.org/ontology-dsl#")
 
 OWL_DSL_000001 = OWL_DSL.OWL_DSL_000001  # singular predicate string template
 OWL_DSL_000002 = OWL_DSL.OWL_DSL_000002  # plural predicate string template
