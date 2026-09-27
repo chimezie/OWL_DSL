@@ -4,31 +4,79 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "OWL_DSL"
-version = "0.2.2"
-description = "Library for extracting Domain Specific Languages from OWL Ontologies (using owlready2)"
+version = "1.0.0"
+description = "Library for extracting Domain Specific Languages from OWL Ontologies (using py-horned-owl)"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "click>=8.3.1",
+    "fuxi",
     "owlready2>=0.50",
+    "py-horned-owl>=2.0.0",
     "pyyaml>=6.0.3",
     "rdflib>=7.5.0",
-    "pytest"
+    "fast-diff-match-patch",
+    "owlapy>=1.6.4",
 ]
+
+[tool.poetry.dependencies]
+my-package = { fuxi = "/home/chimezie/Projects/FuXi-reincarnate/FuXi-reincarnate-chimezie", develop = true }
+
 authors = [
   { name = "Chimezie Ogbuji" }
 ]
-
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+[project.optional-dependencies]
+nlp = [
+    "spacy",
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "sphinx-click>=6.0",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+markers = [
+    "golden: characterization tests pinning exact rendered output",
+    "integration: exercises real external tooling / end-to-end paths",
+    "requires_robot: needs the ROBOT command-line tool on PATH",
+    "requires_java: needs a Java runtime (for ELK / ROBOT)",
+    "requires_nlp: needs spaCy + the en_core_web_sm model for deterministic articles",
+    "slow: noticeably slow test",
+]
+
+[tool.coverage.run]
+source = ["owl_dsl"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
 [project.scripts]
 "owl_dsl.review" = "owl_dsl.cli:main"
 "owl_dsl.reason" = "owl_dsl.reasoner:main"
+"owl_dsl.render_rules" = "owl_dsl.rule_cli:main"

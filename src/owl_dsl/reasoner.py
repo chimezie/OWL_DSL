@@ -1,3 +1,12 @@
+"""Ontology reasoning and logical entailment explanation.
+
+This module provides tools for explaining logical inferences within an OWL ontology.
+It leverages the ELK reasoner (via ROBOT explain) to generate justifications for
+General Concept Inclusions (GCIs), which are then verbalized into human-readable
+natural language. It bridges the gap between owlready2's class representations
+and owlapy's reasoning capabilities.
+"""
+
 import os
 import warnings
 from typing import Tuple
@@ -5,14 +14,22 @@ from typing import Tuple
 import click
 import re
 
+import pyhornedowl
+from pyhornedowl.model import (
+    Class,
+    ObjectIntersectionOf,
+    ObjectUnionOf,
+    ObjectSomeValuesFrom,
+    ObjectAllValuesFrom,
+    ObjectProperty,
+)
 from rdflib import OWL
 
 from owl_dsl.cli import (
     run_subprocess,
-    setup_configuration,
-    CLASS_AND_THEIR_DEFINITION_SPARQL,
     summarize_owl_class,
 )
+from owl_dsl.annotations import resolve_definition_properties
 from owl_dsl.renderer import CNLRenderer
 from owl_dsl import base_uri, prefix_with_indefinite_article
 from owlready2 import (
@@ -37,6 +54,15 @@ from owlapy.owl_reasoner import SyncReasoner
 from owlapy.owl_property import OWLObjectProperty
 from owlapy.owl_ontology import Ontology, OWLClass
 from owlapy.owl_data_ranges import OWLPropertyRange
+from owlapy.iri import IRI
+
+CLASS_AND_THEIR_DEFINITION_SPARQL = """
+# An OWL class with an rdfs:label and any definitions (?defprop) it may have as specified in the ontology.
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX oboInOwl: <http://www.geneontology.org/formats/oboInOwl#>
+SELECT ?owl_class ?definition {{ 
+    {owl_class_expression} 
+    OPTIONAL {{ ?owl_class ?defprop ?definition {def_prop_expression} }} }}"""
 
 EXPLANATION_FILE = os.environ.get("OWL_DSL_EXPLANATION_FILE", "/tmp/explanation.md")
 EXPLANATION_PATTERN = re.compile(
@@ -76,16 +102,38 @@ STATED_GCI_SUBCLASSES_SPARQL = """SELECT DISTINCT ?subclass {{
 
 
 def remove_indefinite_article(s: str) -> str:
+    """
+    Remove the leading 'It ' prefix from a string if it exists.
+
+    Used primarily during the verbalization of GCI justifications to ensure
+    the resulting sentence flows naturally when concatenated with other phrases.
+    """
     if s.startswith("It "):
         return s[3:]
     return s
 
 
 def get_owlready2_class(onto: Ontology, iri: str) -> EntityClass:
+    """
+    Retrieve an owlready2 class entity using its IRI.
+
+    Args:
+        onto: The owlready2 Ontology object to search.
+        iri: The IRI string of the target class.
+
+    Returns:
+        The first matching EntityClass found in the ontology.
+    """
     return onto.search(iri=iri)[0]
 
 
 def count_leading_spaces(s: str) -> int:
+    """
+    Calculate the number of leading whitespace characters in a string.
+
+    Used to preserve the indentation hierarchy of ROBOT explain output
+    during natural language verbalization.
+    """
     return len(s) - len(s.lstrip())
 
 
@@ -93,13 +141,17 @@ def process_manchester_owl_local_names(
     line: str, skip_indices: int = 2
 ) -> Tuple[int, str]:
     """
-    Processes a justification line from robot, returning the number of leading spaces and the result of
-    replacing manchester OWL links with the suffix after the last '/' (skipping a prefix, the length of which is
-    specified and defaults to 2 for '- ')
+    Parse a ROBOT justification line and resolve Manchester OWL links to local names.
 
-    :param line:
-    :param skip_indices:
-    :return:
+    This function extracts the indentation level and replaces full URIs in
+    Manchester OWL links with their short local names (the part after the last slash).
+
+    Args:
+        line: The raw justification line from the reasoner.
+        skip_indices: Number of characters to strip from the start of the processed string.
+
+    Returns:
+        A tuple containing the indentation depth and the cleaned string with local names.
     """
     num_leading_spaces = count_leading_spaces(line)
 
@@ -114,18 +166,17 @@ def process_manchester_owl_local_names(
 
 def process_manchester_owl_uris(line: str, skip_indices: int = 2) -> Tuple[int, str]:
     """
-    Processes a justification line from robot, returning the number of leading spaces and the result of
-    replacing manchester OWL links with <URIs> (skipping a prefix, the length of which is specified and
-    defaults to 2 for '- ')
+    Parse a ROBOT justification line and resolve Manchester OWL links to full URIs.
 
-    :param line: The input string containing Manchester OWL references.
-    :type line: str
-    :param skip_indices: The number of leading characters to strip from the processed string. Defaults to 2.
-    :type skip_indices: int
-    :return: A tuple containing the number of leading spaces and the processed string with specified
-        characters stripped.
-    :rtype: Tuple[int, str]
-    :raises SyntaxError: If the input line cannot be parsed and processed.
+    Similar to `process_manchester_owl_local_names`, but preserves the full
+    URI within angle brackets instead of shortening to the local name.
+
+    Args:
+        line: The raw justification line from the reasoner.
+        skip_indices: Number of characters to strip from the start of the processed string.
+
+    Returns:
+        A tuple containing the indentation depth and the string with URIs in angle brackets.
     """
     num_leading_spaces = count_leading_spaces(line)
 
@@ -138,45 +189,48 @@ def process_manchester_owl_uris(line: str, skip_indices: int = 2) -> Tuple[int, 
     return num_leading_spaces, processed_string.strip()[skip_indices:]
 
 
-def owlapy_to_owlready2(owlapy_expr: OWLPropertyRange, ontology: Ontology):
-    """
-    Converts an owlapy expression (`owlapy_expr`) into its owlready2 equivalent within the
-    given ontology.
+def owlapy_to_pyhornedowl(
+    owlapy_expr: OWLPropertyRange,
+    onto: "pyhornedowl.PyIndexedOntology",
+):
+    """Translate an owlapy logical expression into a py-horned-owl representation.
 
-    :param owlapy_expr: The OWL property range expression to be resolved. It must be
-        an instance of supported `OWLPropertyRange` types such as `OWLObjectIntersectionOf`,
-        `OWLObjectProperty`, `OWLClass`, or `OWLObjectSomeValuesFrom`.
-    :param ontology: The ontology in which mappings and searches will be performed.
-        This is used to lookup matching classes or properties based on IRI.
-    :return: The unfurled expression resolved into its corresponding owlready2 class,
-        property, or restriction representation.
-    :rtype: Union[And, Restriction, Any]
+    This is the replacement for ``owlapy_to_owlready2`` — it converts owlapy
+    expressions to py-horned-owl model objects that the CNLRenderer can consume.
 
-    :raises ValueError: Raised when a class or property in the ontology cannot be
-        found using the IRI provided in `owlapy_expr`.
-    :raises NotImplementedError: Raised for unsupported types of `owlapy_expr` that
-        are not defined in the function logic.
+    Args:
+        owlapy_expr: The owlapy expression to convert.
+        onto: The PyIndexedOntology used for IRI resolution.
+
+    Returns:
+        The equivalent py-horned-owl expression.
+
+    Raises:
+        ValueError: If a class or property IRI cannot be found.
+        NotImplementedError: If the owlapy expression type is not supported.
     """
     if isinstance(owlapy_expr, OWLObjectIntersectionOf):
-        return And(
-            [owlapy_to_owlready2(item, ontology) for item in owlapy_expr._operands]
+        return ObjectIntersectionOf(
+            [owlapy_to_pyhornedowl(item, onto) for item in owlapy_expr._operands]
         )
     elif isinstance(owlapy_expr, (OWLObjectProperty, OWLClass)):
-        class_or_property = ontology.search(iri=owlapy_expr.iri.str)
-        if not class_or_property:
-            raise ValueError(
-                f"Could not find owlready2 class or property ({type(owlapy_expr)}) with IRI {owlapy_expr.iri.str}"
-            )
-        return class_or_property[0]
+        iri_str = owlapy_expr.iri.str
+        if isinstance(owlapy_expr, OWLObjectProperty):
+            return ObjectProperty(onto.iri(iri_str))
+        return Class(onto.iri(iri_str))
     elif isinstance(owlapy_expr, OWLObjectSomeValuesFrom):
-        return Restriction(
-            owlapy_to_owlready2(owlapy_expr.get_property(), ontology),
-            base.SOME,
-            value=owlapy_to_owlready2(owlapy_expr.get_filler(), ontology),
+        return ObjectSomeValuesFrom(
+            ope=owlapy_to_pyhornedowl(owlapy_expr.get_property(), onto),
+            bce=owlapy_to_pyhornedowl(owlapy_expr.get_filler(), onto),
         )
     elif isinstance(owlapy_expr, OWLObjectUnionOf):
-        return Or(
-            [owlapy_to_owlready2(item, ontology) for item in owlapy_expr._operands]
+        return ObjectUnionOf(
+            [owlapy_to_pyhornedowl(item, onto) for item in owlapy_expr._operands]
+        )
+    elif isinstance(owlapy_expr, OWLObjectAllValuesFrom):
+        return ObjectAllValuesFrom(
+            ope=owlapy_to_pyhornedowl(owlapy_expr.get_property(), onto),
+            bce=owlapy_to_pyhornedowl(owlapy_expr.get_filler(), onto),
         )
     else:
         raise NotImplementedError(
@@ -194,31 +248,41 @@ def get_owlready2_ontology(
     """
     Retrieves or loads an ontology using the Owlready2 library. If the ontology is not
     already loaded within the default Owlready2 world, it will attempt to load it from
-    the specified path or URL. A `CNLRenderer` handler is created for rendering the
-    ontology content.
+    the specified path or URL. A ``CNLRenderer`` handler is created using a
+    py-horned-owl ``PyIndexedOntology`` loaded from the same file.
 
     :param ontology_uri: The base IRI of the ontology.
-    :type ontology_uri: str
-    :param owl_url_or_path: The file path or URL to load the ontology from,
-                            if it is not already loaded.
-    :type owl_url_or_path: str
-    :return: A tuple containing the `CNLRenderer` for the ontology and the
-             ontology object itself.
-    :rtype: tuple[CNLRenderer, Ontology]
+    :param owl_url_or_path: The file path or URL to load the ontology from.
+    :returns: A tuple containing the ``CNLRenderer`` and the owlready2 ``Ontology``.
     """
     if ontology_uri not in default_world.ontologies:
-        print(
-            f"Forcibly loading ontology from {owl_url_or_path} into {ontology_uri} (using {sqlite_file})"
-        )
-        ontology = get_ontology(owl_url_or_path)
-        ontology.load()
-        default_world.ontologies[ontology_uri] = ontology
-        ontology.set_base_iri(ontology_uri, rename_entities=False)
-        default_world.save()
+        found = False
+        for stored_uri in default_world.ontologies:
+            if stored_uri.startswith(ontology_uri) or ontology_uri.startswith(
+                stored_uri
+            ):
+                ontology = default_world.ontologies[stored_uri]
+                found = True
+                break
+        if not found:
+            if owl_url_or_path is None:
+                raise ValueError(
+                    f"Ontology '{ontology_uri}' not found in SQLite and no owl_url_or_path provided"
+                )
+            print(
+                f"Forcibly loading ontology from {owl_url_or_path} into {ontology_uri} (using {sqlite_file})"
+            )
+            ontology = get_ontology(owl_url_or_path)
+            ontology.load()
+            default_world.ontologies[ontology_uri] = ontology
+            ontology.set_base_iri(ontology_uri, rename_entities=False)
+            default_world.save()
     else:
         ontology = default_world.ontologies[ontology_uri]
+    pho_onto = pyhornedowl.open_ontology(owl_url_or_path)
+    pho_onto.prefix_mapping.add_prefix("", ontology_uri)
     handler = CNLRenderer(
-        ontology, ontology_uri, verbose=verbose, lowercase_labels=not exact_class_labels
+        pho_onto, ontology_uri, verbose=verbose, lowercase_labels=not exact_class_labels
     )
     return handler, ontology
 
@@ -226,12 +290,13 @@ def get_owlready2_ontology(
 def verbalize_gci_justifications(
     handler: CNLRenderer,
     owl_class: ThingClass,
-    owl_class_label: str,
+    owl_class_rdfs_label: str,
     ontology: Ontology,
     ontology_namespace_baseuri: str,
     owl_url_or_path: str,
     owl_super_class_expression,
     verbose: bool,
+    display_label: str | None = None,
 ):
     """
     Verbalizes justifications for a General Concept Inclusion (GCI) axiom in an ontology.
@@ -243,7 +308,8 @@ def verbalize_gci_justifications(
         properties from an ontology into controlled natural language.
     :param owl_class: Instance of `ThingClass` representing the OWL class for which justifications
         are generated.
-    :param owl_class_label: Human-readable label or name for the OWL class.
+    :param owl_class_rdfs_label: The class's `rdfs:label`. Used in the Manchester axiom passed to
+        `robot explain`, which resolves classes against the OWL file's rdfs:label values.
     :param ontology: Ontology object providing the structure and axioms from which justifications
         are derived.
     :param ontology_namespace_baseuri: String defining the base URI of the ontology namespace, utilized
@@ -253,15 +319,18 @@ def verbalize_gci_justifications(
         GCI axiom.
     :param verbose: Boolean flag indicating if detailed additional information, such as matching explanations
         and verbose commands, should be printed.
+    :param display_label: Optional human-friendly label (typically `skos:prefLabel`) used in the
+        "How is every '...'" console output. Falls back to `owl_class_rdfs_label` when omitted.
 
     :return: None. Outputs verbalized justifications or related ontology reasoning to the console.
     """
-    axiom_to_prove = f"'{owl_class_label}' SubClassOf {owl_super_class_expression}"
+    axiom_to_prove = f"'{owl_class_rdfs_label}' SubClassOf {owl_super_class_expression}"
     extra_info = f" ({axiom_to_prove})" if verbose else ""
     prefixed_owl_superclass = prefix_with_indefinite_article(owl_super_class_expression)
+    printed_label = display_label if display_label else owl_class_rdfs_label
     print(
         f"How is "
-        f"every '{owl_class_label}' ({owl_class.name}) {prefixed_owl_superclass}{extra_info}?\n"
+        f"every '{printed_label}' ({owl_class.name}) {prefixed_owl_superclass}{extra_info}?\n"
     )
     commands = [
         "robot",
@@ -339,7 +408,8 @@ def verbalize_gci_justifications(
                             prop, _range_owl_class = map(
                                 lambda i: ontology.search_one(iri=i), info
                             )
-                            prop_phrase = handler.render_role_restriction(prop)
+                            prop_iri = str(prop.iri)
+                            prop_phrase = handler.render_role_restriction(prop_iri)
                             range_owl_class_label = _range_owl_class.label[0]
                             print(
                                 f"{whitespace_prefix}If {prop_phrase}, then B is a '{range_owl_class_label}'"
@@ -361,9 +431,13 @@ def verbalize_gci_justifications(
                                 [sub_prop, super_prop],
                             )
 
-                            sub_prop_phrase = handler.render_role_restriction(sub_prop)
+                            sub_prop_iri = str(sub_prop.iri)
+                            super_prop_iri = str(super_prop.iri)
+                            sub_prop_phrase = handler.render_role_restriction(
+                                sub_prop_iri
+                            )
                             super_prop_phrase = handler.render_role_restriction(
-                                super_prop
+                                super_prop_iri
                             )
                             sub_prop_label = sub_prop.label[0]
                             super_prop_label = super_prop.label[0]
@@ -396,12 +470,12 @@ def verbalize_gci_justifications(
                             parsed_expression = manchester_to_owl_expression(
                                 ClassB, ontology_namespace_baseuri
                             )
-                            owlready2_expression = owlapy_to_owlready2(
-                                parsed_expression, ontology
+                            pho_expression = owlapy_to_pyhornedowl(
+                                parsed_expression, handler.ontology
                             )
                             defs = [None]
                             handler.extract_definitional_phrases(
-                                defs, [owlready2_expression], "", "", ""
+                                defs, [pho_expression], "", "", ""
                             )
                             defs = [
                                 (
@@ -411,14 +485,15 @@ def verbalize_gci_justifications(
                                 )
                                 for definition in defs[1:]
                             ]
+                            classA_pho = Class(handler.ontology.iri(str(classA.iri)))
                             def_prefix = " " if defs[0].startswith("is ") else " is "
                             if operand == "EquivalentTo":
                                 cnl_phrase = (
-                                    f"Every {handler.render_owl_class(classA)}{def_prefix}"
+                                    f"Every {handler.render_owl_class(classA_pho)}{def_prefix}"
                                     f"{defs[0]} and vice versa."
                                 )
                             else:
-                                cnl_phrase = f"Every {handler.render_owl_class(classA)}{def_prefix}{defs[0]}"
+                                cnl_phrase = f"Every {handler.render_owl_class(classA_pho)}{def_prefix}{defs[0]}"
                             print(f"{whitespace_prefix}{cnl_phrase}")
             else:
                 print(explanation)
@@ -454,8 +529,10 @@ def verbalize_gci_justifications(
 @click.option(
     "--configuration-file",
     type=str,
-    help="Path to configuration YAML file for NL rendering of ontology terms",
-    required=True,
+    help="Path to configuration YAML file for NL rendering of ontology terms. "
+    "When omitted, ontology-embedded OWL_DSL_* annotations are used.",
+    required=False,
+    default=None,
 )
 @click.option("--class-reference", help="The IRI (or label) of the Uberon class")
 @click.option(
@@ -494,13 +571,16 @@ def main(
             ontology_uri, owl_url_or_path, sqlite_file, verbose, exact_class_labels
         )
         reasoner = SyncReasoner(ontology=owl_url_or_path, reasoner="ELK")
-        definition_properties = setup_configuration(handler, configuration_file)
-        class_expression = (
-            f"?owl_class rdfs:label ?label "
-            f"FILTER(?owl_class = <{getattr(handler.ontology_lookup, class_reference).iri}>)"
-            if by_id
-            else f"?owl_class rdfs:label '{class_reference}'"
+        definition_properties, _ = resolve_definition_properties(
+            handler, ontology, owl_url_or_path, configuration_file, verbose
         )
+        if by_id:
+            class_iri = ontology_namespace_baseuri + class_reference
+            class_expression = (
+                f"?owl_class rdfs:label ?label " f"FILTER(?owl_class = <{class_iri}>)"
+            )
+        else:
+            class_expression = f"?owl_class rdfs:label '{class_reference}'"
         prop_conjunction = (
             " || ".join([f"?defprop = <{p}>" for p in definition_properties])
             if len(definition_properties) > 1
@@ -510,14 +590,20 @@ def main(
                 else ""
             )
         )
-        def_prop_expression = f"FILTER({prop_conjunction})"
+        def_prop_expression = f"FILTER({prop_conjunction})" if prop_conjunction else ""
         query = CLASS_AND_THEIR_DEFINITION_SPARQL.format(
             owl_class_expression=class_expression,
             def_prop_expression=def_prop_expression,
         )
         for owl_class, definition in default_world.sparql_query(query):
-            owl_class_label = owl_class.label[0]
-            summarize_owl_class(definition, handler, owl_class)
+            owl_class_rdfs_label = owl_class.label[0]
+            owl_class_label = (
+                owl_class.prefLabel[0]
+                if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel
+                else owl_class_rdfs_label
+            )
+            class_iri_str = str(owl_class.iri)
+            summarize_owl_class(definition, handler, class_iri_str)
             print("------" * 10)
             stated_ancestry_iris = [
                 item.iri if isinstance(item, ThingClass) else item
@@ -532,26 +618,39 @@ def main(
                 if isinstance(item, ThingClass)
             ]
 
-            owl2apy_class = OWLClass(owl_class.iri)
+            owl2apy_iri = IRI.create(
+                class_iri_str, is_file_path="/" not in class_iri_str
+            )
+            owl2apy_class = OWLClass(owl2apy_iri)
             for super_owl_class in reasoner.super_classes(owl2apy_class):
                 try:
                     super_owl_class_iri = str(super_owl_class.iri.str)
                     if super_owl_class_iri in stated_ancestry_iris + [str(OWL.Thing)]:
                         continue
                     super_owl_class = get_owlready2_class(ontology, super_owl_class_iri)
-                    super_class_label = super_owl_class.label[0]
-                    quoted_super_owl_class_label = f"'{super_class_label}'"
-                    if str(super_class_label) not in handler.class_inference_to_ignore:
+                    super_class_rdfs_label = super_owl_class.label[0]
+                    super_class_display_label = (
+                        super_owl_class.prefLabel[0]
+                        if getattr(super_owl_class, "prefLabel", None)
+                        and super_owl_class.prefLabel
+                        else super_class_rdfs_label
+                    )
+                    quoted_super_owl_class_label = f"'{super_class_rdfs_label}'"
+                    if (
+                        str(super_class_display_label)
+                        not in handler.class_inference_to_ignore
+                    ):
                         try:
                             verbalize_gci_justifications(
                                 handler,
                                 owl_class,
-                                owl_class_label,
+                                owl_class_rdfs_label,
                                 ontology,
                                 ontology_namespace_baseuri,
                                 owl_url_or_path,
                                 quoted_super_owl_class_label,
                                 verbose,
+                                display_label=owl_class_label,
                             )
                         except NotImplementedError as e:
                             warnings.warn(
@@ -564,19 +663,27 @@ def main(
             for owl_sub_class in reasoner.sub_classes(owl2apy_class):
                 if owl_sub_class.iri.str not in stated_subclass_iris:
                     try:
-                        owl_super_class_label = f"'{owl_class_label}'"
+                        owl_super_class_label = f"'{owl_class_rdfs_label}'"
                         owlr2_sub_class = get_owlready2_class(
                             ontology, owl_sub_class.iri.str
+                        )
+                        owl_sub_class_rdfs_label = owlr2_sub_class.label[0]
+                        owl_sub_class_label = (
+                            owlr2_sub_class.prefLabel[0]
+                            if getattr(owlr2_sub_class, "prefLabel", None)
+                            and owlr2_sub_class.prefLabel
+                            else owl_sub_class_rdfs_label
                         )
                         verbalize_gci_justifications(
                             handler,
                             owlr2_sub_class,
-                            owlr2_sub_class.label[0],
+                            owl_sub_class_rdfs_label,
                             ontology,
                             ontology_namespace_baseuri,
                             owl_url_or_path,
                             owl_super_class_label,
                             verbose,
+                            display_label=owl_sub_class_label,
                         )
                     except (NotImplementedError, IndexError) as e:
                         warnings.warn(
@@ -587,13 +694,16 @@ def main(
         handler, ontology = get_owlready2_ontology(
             ontology_uri, owl_url_or_path, sqlite_file
         )
-        definition_properties = setup_configuration(handler, configuration_file)
-        class_expression = (
-            f"?owl_class rdfs:label ?label "
-            f"FILTER(?owl_class = <{getattr(handler.ontology_lookup, class_reference).iri}>)"
-            if by_id
-            else f"?owl_class rdfs:label '{class_reference}'"
+        definition_properties, _ = resolve_definition_properties(
+            handler, ontology, owl_url_or_path, configuration_file, verbose
         )
+        if by_id:
+            class_iri = ontology_namespace_baseuri + class_reference
+            class_expression = (
+                f"?owl_class rdfs:label ?label " f"FILTER(?owl_class = <{class_iri}>)"
+            )
+        else:
+            class_expression = f"?owl_class rdfs:label '{class_reference}'"
         prop_conjunction = (
             " || ".join([f"?defprop = <{p}>" for p in definition_properties])
             if len(definition_properties) > 1
@@ -603,7 +713,7 @@ def main(
                 else ""
             )
         )
-        def_prop_expression = f"FILTER({prop_conjunction})"
+        def_prop_expression = f"FILTER({prop_conjunction})" if prop_conjunction else ""
         query = CLASS_AND_THEIR_DEFINITION_SPARQL.format(
             owl_class_expression=class_expression,
             def_prop_expression=def_prop_expression,
@@ -611,18 +721,24 @@ def main(
         if verbose:
             print(query)
         for owl_class, definition in default_world.sparql_query(query):
-            owl_class_label = owl_class.label[0]
-            summarize_owl_class(definition, handler, owl_class)
+            owl_class_rdfs_label = owl_class.label[0]
+            owl_class_label = (
+                owl_class.prefLabel[0]
+                if getattr(owl_class, "prefLabel", None) and owl_class.prefLabel
+                else owl_class_rdfs_label
+            )
+            summarize_owl_class(definition, handler, str(owl_class.iri))
             print("------" * 10)
             verbalize_gci_justifications(
                 handler,
                 owl_class,
-                owl_class_label,
+                owl_class_rdfs_label,
                 ontology,
                 ontology_namespace_baseuri,
                 owl_url_or_path,
                 manchester_owl_expression,
                 verbose,
+                display_label=owl_class_label,
             )
 
 

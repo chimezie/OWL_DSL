@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://purl.org/sig/ont/fma.owl#"
+     xml:base="http://purl.org/ontology-dsl#"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:fma="http://purl.org/sig/ont/fma/"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:metadata="http://data.bioontology.org/metadata/">
+    <owl:Ontology rdf:about="owl">
+        <owl:versionIRI rdf:resource="http://purl.org/sig/ont/fma_5.0.0.owl"/>
+        <rdfs:label>Ontology of OWL_DSL predicate NL phrasing annotations</rdfs:label>>
+        <rdfs:comment rdf:datatype="http://www.w3.org/2001/XMLSchema#string"
+           >These annotation are used on ontologies to specify they have information about how to render
+           sentences about its predicates and their classes</rdfs:comment>
+        <owl:versionInfo rdf:datatype="http://www.w3.org/2001/XMLSchema#string">0.5.0</owl:versionInfo>
+    </owl:Ontology>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000001">
+        <rdfs:label xml:lang="en">singular predicate string template</rdfs:label>
+        <rdfs:label>singular predicate string template</rdfs:label>
+        <rdfs:comment>This corresponds with using `role_restriction_phrasing` on a property and where
+         this is the first item in that 3-item list of the `.CNL.yaml` files</rdfs:comment>
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000002">
+        <rdfs:label xml:lang="en">plural predicate string template</rdfs:label>
+        <rdfs:label>plural predicate string template</rdfs:label>
+        <rdfs:comment>This corresponds with using `role_restriction_phrasing` on a property and where
+         this is the second item in that 3-item list of the `.CNL.yaml` files</rdfs:comment>
+
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000003">
+        <rdfs:label xml:lang="en">phrase using the predicate to request a definition of the term</rdfs:label>
+        <rdfs:label>phrase using the predicate to request a definition of the term</rdfs:label>
+        <rdfs:comment>This corresponds with using `role_restriction_phrasing` on a property and where
+         this is the third item in that 3-item list of the `.CNL.yaml` files</rdfs:comment>
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000004">
+        <rdfs:label xml:lang="en">class inferences to ignore (an RDF collection)</rdfs:label>
+        <rdfs:label>class inference to ignore</rdfs:label>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+        <rdfs:comment>Includes the class in what would correspond to the `class_inference_to_ignore`
+        item in `.CNL.yaml` files  if true</rdfs:comment>
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000005">
+        <rdfs:label xml:lang="en">expert definition properties</rdfs:label>
+        <rdfs:label>expert definition properties (an RDF collection)</rdfs:label>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+        <rdfs:comment>The annotation properties used on the annotating property which
+        provide an expert definition of a term (the string, a template) and corresponds to the
+        `tooling` / `expert_definition_properties` section of `.CNL.yaml` files if true</rdfs:comment>
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000006">
+        <rdfs:label xml:lang="en">standard role restriction is phrasing</rdfs:label>
+        <rdfs:label>standard role restriction is phrasing (an RDF collection)</rdfs:label>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#boolean"/>
+        <rdfs:comment>Includes the class in what would corresponds to the `standard_role_restriction_is_phrasing`
+        section of `.CNL.yaml` if true  files</rdfs:comment>
+    </owl:AnnotationProperty>
+    <owl:AnnotationProperty rdf:about="OWL_DSL_000007">
+        <rdfs:label xml:lang="en">reflexive roles</rdfs:label>
+        <rdfs:label>reflexive roles</rdfs:label>
+        <rdfs:comment>Corresponds to the `reflexive_roles` section of `.CNL.yaml` files, where the annotated
+        class is the URL and range (a string) is the reflexive role phrase</rdfs:comment>
+    </owl:AnnotationProperty>
+</rdf:RDF>
