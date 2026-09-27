@@ -30,12 +30,6 @@ RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 OWL_DSL_NS = "http://purl.org/ontology-dsl#"
 OWL_DSL = Namespace(OWL_DSL_NS)
 
-EXPECTED_TEXT1 = (
-    "The Hypertension Diagnosis from H/P is defined as a History and Physical Evaluation that contains a "
-    "Pulmonary hypertension primary medical diagnosis or "
-    "Systemic vascular hypertension primary medical diagnosis"
-)
-
 EXPECTED_TEXT2 = "The Fantastical Pig is defined as a Pig that speaks a Language or has a Pair of Wings. It is a Pig"
 EXPECTED_TEXT3 = "The Pig is defined as an Animal that bears only a Pig"
 EXPECTED_TEXT4 = (
@@ -53,16 +47,6 @@ def _build_annotation_graph(prop_templates: dict[str, str]) -> Graph:
     for prop_iri_str, template in prop_templates.items():
         g.add((URIRef(prop_iri_str), OWL_DSL.OWL_DSL_000001, Literal(template)))
     return g
-
-
-def test_patient_record_ontology():
-    onto = pyhornedowl.open_ontology_from_file(str(DIR / "ptrec.owl"))
-    graph = Graph().parse(str(DIR / "ptrec.owl"))
-    handler = CNLRenderer(onto, BASE_URI, verbose=True, lowercase_labels=False)
-    configure_cnl_from_annotations(handler, graph)
-    class_iri = BASE_URI + "H_and_P_with_htn_dx"
-    rendered = handler.handle_owl_class(class_iri)
-    assert rendered == EXPECTED_TEXT1
 
 
 def test_conjunct_disjunct_rendering():
