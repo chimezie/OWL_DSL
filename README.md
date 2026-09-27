@@ -119,7 +119,12 @@ and custom phrasing for specific properties.
 
 ## Configuration
 
-There are two ways to configure how OWL_DSL renders terms:
+Configuration is resolved by a single helper, `owl_dsl.annotations.resolve_definition_properties`,
+used by every entry point (`owl_dsl.review`, `owl_dsl.reason`, `owl_dsl.render_rules`). It applies
+an optional YAML file first, then ontology-embedded annotations. **Annotations take precedence**:
+when the ontology declares expert definition properties (`OWL_DSL_000005`), those win; otherwise the
+YAML file's definition properties are kept. Phrasing templates, ignore lists, and reflexive roles
+accumulate from both sources.
 
 ### OWL Annotation Properties (Preferred)
 
@@ -140,15 +145,14 @@ The annotation properties are defined in the namespace
 | `OWL_DSL_000006` | Standard role restriction "is phrasing" — marks properties whose CNL template is derived as `"is <label> {}"` |
 | `OWL_DSL_000007` | Reflexive roles — custom phrasing for reflexive property restrictions |
 
-When annotations are present, use `configure_cnl_from_annotations` to load them into a renderer:
+To configure a renderer from the ontology alone (the preferred approach), use
+`resolve_definition_properties` with no configuration file:
 
 ```python
-from owl_dsl.annotations import configure_cnl_from_annotations
-from rdflib import Graph
+from owl_dsl.annotations import resolve_definition_properties
 
-# Load the OWL file separately with rdflib when ontology is a PyIndexedOntology
-graph = Graph().parse("path/to/ontology.owl")
-configure_cnl_from_annotations(handler, graph)
+# Ontology-embedded OWL_DSL_* annotations only
+definition_properties, _ = resolve_definition_properties(handler, ontology, "path/to/ontology.owl")
 ```
 
 ### YAML Configuration File
@@ -199,13 +203,15 @@ reflexive_roles:
 
 A list of property URIs for which the CNL rendering should omit indefinite articles.
 
-To use a configuration file from Python:
+To use a configuration file from Python (used as a fallback when the ontology declares
+no expert definition properties):
 
 ```python
 from owl_dsl.annotations import resolve_definition_properties
 
-# Use a YAML file as a fallback for annotations in an ontology
-definition_properties, _ = resolve_definition_properties(handler, None, "path/to/ontology.owl", "path/to/config.yaml")
+definition_properties, _ = resolve_definition_properties(
+    handler, ontology, "path/to/ontology.owl", configuration_file="path/to/config.yaml"
+)
 ```
 
 #### class_inference_to_ignore
@@ -235,19 +241,22 @@ Options:
                                   rdfs:label)
   --class-reference TEXT          The ID (or label) of the Uberon class
   --class-search TEXT             The string to use for searching for a class
+                                  to use
   --regex-search / --no-regex-search
   --verbose / --no-verbose
   --exact-class-labels / --no-exact-class-labels
                                   Render OWL class labels as is (don't
                                   convert to lower case by default)
   --configuration-file TEXT       Path to configuration YAML file for NL
-                                  rendering of ontology terms
-  --sqlite-file TEXT              Location of SQLite file used for
-                                  persistence  [required]
+                                  rendering of ontology terms. When omitted,
+                                  ontology-embedded OWL_DSL_* annotations are
+                                  used.
+  --sqlite-file TEXT              Location of SQLite file used for persistence
+                                  (only needed for destroy_sqlite action)
   --prefix TEXT                   Filter properties by URI prefix (only for
                                   'find_properties' action)
-  --prop-reference-label TEXT     Filter properties by rdfs:label using
-                                  REGEX (only for 'find_properties' action)
+  --prop-reference-label TEXT     Filter properties by rdfs:label using REGEX
+                                  (only for 'find_properties' action)
   --show-property-definition-usage
                                   Show class definition examples for listed
                                   properties (only for 'find_properties'
@@ -255,6 +264,14 @@ Options:
   --limit INTEGER                 Limit number of results (only for
                                   'find_properties' action with
                                   --show-property-definition-usage)
+  --collect-definition-info / --no-collect-definition-info
+                                  Collect definition info during rendering
+                                  (default: on)
+  --full-definition / --no-full-definition
+                                  Include logical CNL in the class summary
+                                  (default: on)
+  --no-textual-definition         Suppress the textual definition, show only
+                                  logical CNL
   --ontology-uri TEXT             The URI of the ontology  [required]
   --ontology-namespace-baseuri TEXT
                                   The base URI of the ontology namespace
@@ -265,7 +282,9 @@ Options:
 The `--ontology-uri` option specifies the URI of the ontology into which the ontology is loaded.
 The `--ontology-namespace-baseuri` specifies the base URI used to resolve entity local names.
 
-OWL_DSL loads ontologies directly using `pyhornedowl.open_ontology()`. The `--sqlite-file` option specifies the location of the persistence database.
+OWL_DSL loads ontologies directly using `pyhornedowl.open_ontology()`. The `--sqlite-file` option is only
+needed for the `destroy_sqlite` action. The `--configuration-file` option is optional for every action:
+when omitted, ontology-embedded `OWL_DSL_*` annotations supply the configuration.
 
 #### Actions
 
@@ -347,7 +366,9 @@ Options:
   --sqlite-file TEXT              Location of SQLite file used for
                                   persistence  [required]
   --configuration-file TEXT       Path to configuration YAML file for NL
-                                  rendering of ontology terms  [required]
+                                  rendering of ontology terms. When omitted,
+                                  ontology-embedded OWL_DSL_* annotations are
+                                  used.
   --class-reference TEXT          The IRI (or label) of the class
   --manchester-owl-expression TEXT
                                   Manchester OWL expression for GCI (used
@@ -388,7 +409,8 @@ How is every 'vestibular aqueduct' (UBERON_0002279) a 'bone foramen'?
 #### Skipping General Classes
 
 Classes that are too high in an upper ontology (e.g., BFO terms) can be excluded from
-entailment output via the `class_inference_to_ignore` configuration directive in the YAML file.
+entailment output via the `class_inference_to_ignore` YAML directive or, preferably,
+`OWL_DSL_000004` annotations embedded in the ontology.
 
 #### Justifying Custom GCI Axioms
 
@@ -431,9 +453,9 @@ Options:
   --sqlite-file TEXT              SQLite backend file for an already-loaded
                                    world.
   --configuration-file TEXT       YAML configuration file for CNL rendering
-                                  (same format as owl_dsl.review). When omitted,
-                                  OWL_DSL_000001 annotations in the ontology
-                                  are used.
+                                  (same format as owl_dsl.review). Supplements
+                                  ontology-embedded OWL_DSL_* annotations,
+                                  which take precedence.
   --skip-subclass-rules / --no-skip-subclass-rules
                                   Skip pure rdf:type → rdf:type rules (already
                                   covered by OWL class rendering).

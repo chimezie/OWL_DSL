@@ -68,7 +68,7 @@ def _is_subclass_rule(rule) -> bool:
     type=str,
     default=None,
     help="YAML configuration file for CNL rendering (same format as owl_dsl.review). "
-    "When omitted, OWL_DSL_000001 annotations in the ontology are used.",
+    "Supplements ontology-embedded OWL_DSL_* annotations, which take precedence.",
 )
 @click.option(
     "--skip-subclass-rules/--no-skip-subclass-rules",
