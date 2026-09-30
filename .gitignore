@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+.tox/
+.mypy_cache/
+.pytype/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.sqlite3
+.env
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+.ruff_cache/
+.pytest_cache/
+
+# Documentation
+docs/build/
+docs/_build/
+
+# Local ontology fixtures and large data (root only --
+# ontology_configurations/ stays committable)
+/*.owl
+/*.ofn
+/*.zip
+/inferences.tsv
+/test.owl
+/test.xml
+/ontology-*.ofn
+
+# Large fixture / tool checkouts (directories)
+/FMA/
+/manchester-syntax-owl2/
+/robot/
+/profilechecker/
+/owl_dsl_clone/
+/sandbox/
+/scratch/
+
+# Absolute-path symlink to an external checkout -- never commit
+/FuXi-reincarnate-chimezie
+
+# One-off experiment scripts at repo root (untracked scratch)
+scrap.py
+/main.py
+/transform.py
+/debug_owlready.py
+/extract_fma_inferences.py
+/fix_fma.py
+/fma_cnl_renderer.py
+/rewrite_single_group_axioms.py
+/verify_rewrite.py
+
+#There
+issues/
+plans/
+examples/
