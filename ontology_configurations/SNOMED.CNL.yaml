@@ -1,0 +1,40 @@
+class_inference_to_ignore:
+  - 'Substance'
+  - 'Disposition'
+  - 'Medicinal product'
+  - 'Drug or medicament'
+
+tooling:
+  expert_definition_properties:
+    - http://www.w3.org/2004/02/skos/core#definition
+
+role_restriction_wo_articles:
+  - http://snomed.info/id/609096000
+
+standard_role_restriction_is_phrasing: []
+
+role_restriction_phrasing:
+  'http://snomed.info/id/609096000':
+    - '{}'
+    - '{}'
+    - 'What is true of {}?'
+  'http://snomed.info/id/246075003':
+    - '{} causes'
+    - '{} causes'
+    - 'What is {} caused by?'
+  'http://snomed.info/id/726542003':
+    - 'has the disposition of {}'
+    - 'have the disposition of {}'
+    - 'What disposition does {} have?'
+  'http://snomed.info/id/127489000':
+    - 'has an active ingredient {}'
+    - 'have active ingredients {}'
+    - 'What active ingredients does {} have?'
+  'http://snomed.info/id/738774007':
+    - 'is a modification of {}'
+    - 'are modifications of {}'
+    - 'What is {} a modification of?'
+
+reflexive_roles:
+  - 'http://snomed.info/id/738774007':
+    - 'that is a modification of itself'
