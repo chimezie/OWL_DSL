@@ -1,5 +1,15 @@
 # Changelog
 
+## 🚀 Major Evolution: The 1.0 Milestone
+The 1.0 release marks a fundamental shift from a lightweight rendering utility to a robust OWL 2 EL reasoning and rule-rendering engine.
+
+* **Semantic Standardization**: Migrated the ontology annotation namespace to `http://purl.org/ontology-dsl#` to ensure self-describing, portable ontologies.
+* **Rule-Based Rendering**: Introduced the `RuleRenderer` to support FuXi Horn rules, expanding capability beyond simple class definitions.
+* **Reasoning Capabilities**: Integrated EL++ profile support for tractable TBox reasoning, including reflexive roles and range restrictions.
+* **Core Engine Upgrade**: Transitioned to `py-horned-owl` for an axiom-centric, high-performance ontology model.
+
+---
+
 ## [1.0.1] - 2026-09-27
 
 ### Fixed
