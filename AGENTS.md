@@ -18,6 +18,7 @@ An instance of `owl_dsl.renderer.CNLRenderer` can be instantiated:
 ```python
 renderer = CNLRenderer(ontology, ontology_namespace_uri)
 ```
+
 A configuration file (`configuration_file`), a YAML file, can be used with the renderer to get the definition properties:
 
 ```python
@@ -46,3 +47,11 @@ os.remove(sqlite_file)
 ## Code Standards
 
 - Follow "Black" Python coding convention
+
+## Rule rendering (added in v1.0.1)
+
+`RuleRenderer` (extends `CNLRenderer`) renders FuXi Horn rules from N3 as CNL sentences, using shared `OWL_DSL_000001` templates.
+
+- CLI: `owl_dsl.render_rules`
+- Python: `owl_dsl.rule_renderer.RuleRenderer.render_rule`
+- Example: `tests/test_introspective_rule_rendering.py`

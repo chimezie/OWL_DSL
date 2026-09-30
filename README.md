@@ -30,7 +30,7 @@ while maintaining broad compatibility with other OWL 2 profiles.
 OWL_DSL is built around a few key components:
 
 - **Rendering Engine** (`owl_dsl.renderer.CNLRenderer`): Converts DL axioms into English sentences using py-horned-owl's axiom-centric model and a configurable set of phrasing templates.
-- **Horn Rule Renderer** (`owl_dsl.rule_renderer.RuleRenderer`): Extends the rendering engine to translate FuXi Horn rules (parsed from Notation 3, or RIF, et.) into CNL.
+- **Horn Rule Renderer** (`owl_dsl.rule_renderer.RuleRenderer`): Extends the rendering engine to translate FuXi Horn rules (parsed from Notation 3) into CNL.
 - **Annotation Loading** (`owl_dsl.annotations`): Reads OWL annotation properties from an RDF graph to configure phrasing templates, definition properties, and other rendering settings.
 - **CLI Tools**:
   - `owl_dsl.review`: Review class definitions, find classes/properties, load ontologies, and lint annotations.
@@ -119,9 +119,12 @@ and custom phrasing for specific properties.
 
 ## Configuration
 
-Configuration is resolved by a single helper, `owl_dsl.annotations.resolve_definition_properties`,
-used by every entry point (`owl_dsl.review`, `owl_dsl.reason`, `owl_dsl.render_rules`). It applies
-an optional YAML file first, then ontology-embedded annotations. **Annotations take precedence**:
+Configuration is resolved by a single helper, `owl_dsl.annotations.resolve_definition_properties`.
+
+It takes an instance of `CNLRenderer`, an optional loaded ontology (py-horned-owl ``PyIndexedOntology`` or owlready2 ``Ontology``), a Path or URL of the OWL file, 
+an optional path to a YAML configuration file, and a verbose keyword argument.
+
+It applies an optional YAML file first, then ontology-embedded annotations. **Annotations take precedence**:
 when the ontology declares expert definition properties (`OWL_DSL_000005`), those win; otherwise the
 YAML file's definition properties are kept. Phrasing templates, ignore lists, and reflexive roles
 accumulate from both sources.
@@ -483,8 +486,7 @@ or override annotation-derived templates.
 
 ## Horn Rule Rendering (Python API)
 
-The `RuleRenderer` class extends `CNLRenderer` to render FuXi Horn rules as CNL sentences,
-reusing the same property phrase templates that drive OWL class rendering.
+The `RuleRenderer` class extends `CNLRenderer` to render FuXi Horn rules as CNL sentences, reusing the same property phrase templates that drive OWL class rendering.
 
 A Horn rule `{ body } => { head }` is rendered as:
 
@@ -495,17 +497,16 @@ A Horn rule `{ body } => { head }` is rendered as:
 
 ```python
 from io import StringIO
-from fuxi.Horn.HornRules import HornFromN3
+from fuxi.Horn.HornRules import horn_from_n3
 from fuxi.Horn.PositiveConditions import Uniterm
-from rdflib import RDF
-from pyhornedowl import open_ontology, PyIndexedOntology
-from pyhornedowl.components import DeclareClass, DeclareObjectProperty, AnnotationAssertion
+from rdflib import RDF, Graph, Namespace, URIRef, Literal
+from pyhornedowl import PyIndexedOntology
+from pyhornedowl.model import Class, ObjectProperty, DeclareClass, DeclareObjectProperty, IRI
 from owl_dsl.rule_renderer import RuleRenderer
 from owl_dsl.annotations import configure_cnl_from_annotations
-from rdflib import Graph
 
 BASE_URI = "http://example.org/"
-OWL_DSL_URI = "https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/"
+OWL_DSL = Namespace("http://purl.org/ontology-dsl#")
 
 N3_RULES = """
 @prefix : <http://example.org/>.
@@ -515,37 +516,38 @@ N3_RULES = """
     => { ?street :suitable_observer ?flyer } .
 """
 
-program = list(HornFromN3(StringIO(N3_RULES)))
+program = list(horn_from_n3(StringIO(N3_RULES)))
 
 # Use PyIndexedOntology to define the ontology structure
 ontology = PyIndexedOntology()
-ontology.add_component(DeclareClass(BASE_URI + "WebSlinger"))
-ontology.add_component(DeclareClass(BASE_URI + "Helicopter"))
-ontology.add_component(DeclareClass(BASE_URI + "flying"))
-ontology.add_component(DeclareClass(BASE_URI + "heavy"))
+ontology.prefix_mapping.add_default_prefix_names()
+ontology.prefix_mapping.add_prefix("", Namespace(BASE_URI))
 
-ontology.add_component(DeclareObjectProperty(BASE_URI + "locomotion"))
-ontology.add_component(DeclareObjectProperty(BASE_URI + "traffic"))
-ontology.add_component(DeclareObjectProperty(BASE_URI + "suitable_observer"))
+classes = [
+    ("WebSlinger", "Web Slinger"),
+    ("Helicopter", "Helicopter"),
+    ("flying", "flying"),
+    ("heavy", "heavy"),
+]
+for suffix, label in classes:
+    ontology.add_component(DeclareClass(Class(IRI.parse(BASE_URI + suffix))))
+    ontology.set_label(IRI.parse(BASE_URI + suffix), label)
 
-# Add labels and CNL templates as annotations
-# Note: In a real scenario, these would be in the OWL file
-ontology.add_component(AnnotationAssertion(BASE_URI + "WebSlinger", "rdfs:label", "Web Slinger"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "Helicopter", "rdfs:label", "Helicopter"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "flying", "rdfs:label", "flying"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "heavy", "rdfs:label", "heavy"))
+properties = [
+    ("locomotion", "locomotion", "has {} as their means of locomotion"),
+    ("traffic", "traffic", "has {} traffic"),
+    ("suitable_observer", "suitable_observer", "has {} as a suitable observer"),
+]
+for suffix, label, template in properties:
+    ontology.add_component(DeclareObjectProperty(ObjectProperty(IRI.parse(BASE_URI + suffix))))
+    ontology.set_label(IRI.parse(BASE_URI + suffix), label)
 
-ontology.add_component(AnnotationAssertion(BASE_URI + "locomotion", "rdfs:label", "locomotion"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "locomotion", OWL_DSL_URI + "OWL_DSL_000001", "has {} as their means of locomotion"))
+# Add CNL templates as annotations in an rdflib graph
+graph = Graph()
+for suffix, _, template in properties:
+    iri = BASE_URI + suffix
+    graph.add((URIRef(iri), OWL_DSL.OWL_DSL_000001, Literal(template)))
 
-ontology.add_component(AnnotationAssertion(BASE_URI + "traffic", "rdfs:label", "traffic"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "traffic", OWL_DSL_URI + "OWL_DSL_000001", "has {} traffic"))
-
-ontology.add_component(AnnotationAssertion(BASE_URI + "suitable_observer", "rdfs:label", "suitable_observer"))
-ontology.add_component(AnnotationAssertion(BASE_URI + "suitable_observer", OWL_DSL_URI + "OWL_DSL_000001", "has {} as a suitable observer"))
-
-# Create an rdflib graph for the renderer to load annotations from
-graph = ontology.as_rdflib_graph()
 renderer = RuleRenderer(ontology, BASE_URI, verbose=False, lowercase_labels=False)
 configure_cnl_from_annotations(renderer, graph)
 
@@ -567,6 +569,19 @@ If ?flyer has flying as their means of locomotion and ?street has heavy traffic,
 then ?street has ?flyer as a suitable observer.
 ```
 
+### Chaining Example (Complex Rules)
+
+Horn rules can express complex logical chains, such as describing an aunt:
+
+```python
+N3_CHAINS = """
+@prefix : <http://example.org/>.
+{?x :parent ?y. ?y :sister ?z} => {?x :aunt ?z} .
+"""
+# ... (rest of setup) ...
+# Output: "If ?x has ?y as their parent and ?y has ?z as their sister, then ?x has ?z as their aunt."
+```
+
 ### Rule Rendering Summary
 
 | Body | Head | Output form |
@@ -574,62 +589,7 @@ then ?street has ?flyer as a suitable observer.
 | `?x rdf:type :C` | property triple | `Every <C-label> <phrase>.` |
 | conjunction of property triples | property triple | `If <conj phrases>, then <head phrase>.` |
 
-Pure `rdf:type => rdf:type` rules (OWL subclass axioms) are typically skipped, since
-`CNLRenderer` already handles OWL class rendering.
-
-### Alternative (pure rdflib / InfixOwl)
-
-```python
-from rdflib import Graph, Namespace, RDF
-from fuxi.Horn.HornRules import HornFromN3
-from fuxi.Horn.PositiveConditions import Uniterm
-from fuxi.Syntax.InfixOWL import Class, Property, AnnotationProperty, GraphContext
-from owl_dsl.rule_renderer import RuleRenderer
-from owl_dsl.annotations import configure_cnl_from_annotations
-
-BASE_URI = "http://example.org/"
-NS = Namespace(BASE_URI)
-OWL_DSL = Namespace("https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/")
-
-program = list(HornFromN3(StringIO(N3_RULES)))
-graph = Graph()
-
-with GraphContext(graph, {"ex": NS}):
-    phrase = AnnotationProperty(OWL_DSL.OWL_DSL_000001)
-    Class(NS.WebSlinger).set_label("Web Slinger")
-    Class(NS.Helicopter).set_label("Helicopter")
-    Class(NS.flying).set_label("flying")
-
-    locomotion = Property(NS.locomotion).set_label("locomotion")
-    locomotion.set_annotation(phrase, "has {} as their means of locomotion")
-    traffic = Property(NS.traffic).set_label("traffic")
-    traffic.set_annotation(phrase, "has {} traffic")
-    suitable_observer = Property(NS.suitable_observer).set_label("suitable_observer")
-    suitable_observer.set_annotation(phrase, "has {} as a suitable observer")
-    Class(NS.heavy).set_label("heavy")
-
-renderer = RuleRenderer(None, BASE_URI, verbose=False, lowercase_labels=False)
-configure_cnl_from_annotations(renderer, graph)
-
-for rule in program:
-    if not (isinstance(rule.formula.body, Uniterm) and
-            rule.formula.body.op == RDF.type and
-            isinstance(rule.formula.head, Uniterm) and
-            rule.formula.head.op == RDF.type):
-        print(renderer.render_rule(rule))
-```
-
-Notes:
-- Keep the `@prefix : <http://example.org/>` in the N3 rules consistent with the ontology base URI.
-- Property CNL phrases are taken from `OWL_DSL_000001` annotations on object properties.
-- If your rules use `rdf:type` clauses, ensure class labels are present.
-- `configure_cnl_from_annotations` must receive the rdflib graph that contains the annotations.
-
-## Tests
-
-```console
-uv run --active --extra nlp pytest --disable-warnings tests/[...]
-```
+Pure `rdf:type => rdf:type` rules (OWL subclass axioms) are typically skipped, since `CNLRenderer` already handles OWL class rendering.
 
 For reasoning tests, [ROBOT](https://robot.obolibrary.org/) must be installed and on your PATH.
 
