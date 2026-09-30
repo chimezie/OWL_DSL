@@ -551,14 +551,6 @@ wheels = [
 ]
 
 [[package]]
-name = "en-core-web-sm"
-version = "3.8.0"
-source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
-wheels = [
-    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl", hash = "sha256:1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85" },
-]
-
-[[package]]
 name = "fast-diff-match-patch"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1384,7 +1376,6 @@ docs = [
     { name = "sphinx-rtd-theme" },
 ]
 nlp = [
-    { name = "en-core-web-sm" },
     { name = "spacy" },
 ]
 test = [
@@ -1395,7 +1386,6 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.3.1" },
-    { name = "en-core-web-sm", marker = "extra == 'nlp'", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fast-diff-match-patch" },
     { name = "fuxi", specifier = ">=2.0.1" },
     { name = "owlapy", specifier = ">=1.6.4" },
