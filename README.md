@@ -136,7 +136,7 @@ combining the rendering logic with the knowledge model so the ontology is self-d
 machine-understandable.
 
 The annotation properties are defined in the namespace
-`https://github.com/chimezie/OWL_DSL/tree/main/ontology_configurations/`:
+`http://purl.org/ontology-dsl#`:
 
 | Annotation | Purpose |
 |---|---|
